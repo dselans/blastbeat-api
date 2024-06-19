@@ -1,0 +1,5 @@
+.env
+.idea
+backend-data/*
+c.out
+build
