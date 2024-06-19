@@ -15,7 +15,7 @@ _Last updated: 06/18/2024_
 1. Sane code layout [1]
 1. Structured logging
 1. Good health-checking practices (uses async health-checking)
-1. Sample [kubernetes deploy configs](deploy.stage.yml)
+1. Sample [kubernetes deploy configs](deploy.stage.old.yml)
 1. Configurable profiling support (pprof)
 1. Pre-instrumented with [New Relic APM](https://newrelic.com)
 1. Supports AWS EKS and ECR

@@ -1,6 +1,9 @@
 SERVICE = go-svc-template
 ARCH = $(shell uname -m)
 VERSION ?= $(shell git rev-parse --short=8 HEAD)
+AWS_ACCOUNT_ID ?= $(shell aws sts get-caller-identity --query Account --output text)
+AWS_REGISTRY_ID ?= $(shell aws ecr describe-registry --region us-east-1 --query registryId --output text)
+AWS_ECR_URL ?= $(AWS_ACCOUNT_ID).dkr.ecr.us-east-1.amazonaws.com
 
 GO = CGO_ENABLED=$(CGO_ENABLED) GOFLAGS=-mod=vendor go
 CGO_ENABLED ?= 0
@@ -97,16 +100,16 @@ test/coverage:
 
 .PHONY: docker/login
 docker/login: description = Login to AWS ECR
-docker/login: prerequisite
+docker/login:
 	aws ecr get-login-password --region us-east-1 | \
-	docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.us-east-1.amazonaws.com
+	docker login --username AWS --password-stdin $(AWS_ECR_URL)
 
 .PHONY: docker/build
 docker/build: description = Build docker image (you must be authenticated to DO registry)
-docker/build: prerequisite
-	docker buildx build --push --platform=linux/amd64 --build-arg VERSION=$(VERSION) \
-	-t $(AWS_REGISTRY_ID)/$(SERVICE):$(VERSION) \
-	-t $(AWS_REGISTRY_ID)/$(SERVICE):latest \
+docker/build:
+	docker buildx build --push --platform=linux/arm64,linux/amd64 --build-arg VERSION=$(VERSION) \
+    -t $(AWS_ECR_URL)/$(SERVICE):$(VERSION) \
+	-t $(AWS_ECR_URL)/$(SERVICE):latest \
 	-f ./Dockerfile .
 
 .PHONY: docker/run
@@ -116,37 +119,31 @@ docker/run:
 
 ### Kubernetes
 
-.PHONY: k8s/deploy/staging
-k8s/deploy/staging: description = Deploy to staging
-k8s/deploy/staging: prerequisite
-	echo $(AWS_REGISTRY_ID) && \
-	cat deploy.staging.yml | \
-	sed "s/{{REGISTRY}}/$(AWS_REGISTRY_ID)/g" | \
-	sed "s/{{VERSION}}/$(VERSION)/g" | \
-	sed "s/{{SERVICE}}/$(SERVICE)/g"
-#	kubectl apply -f -
-
-.PHONY: k8s/deploy/production
-k8s/deploy/production: description = Deploy to production
-k8s/deploy/production: prerequisite
-	cat deploy.production.yml | \
-	sed "s/{{REGISTRY}}/$(AWS_REGISTRY_ID)/g" | \
+.PHONY: k8s/deploy/stage
+k8s/deploy/stage: description = Deploy to staging
+k8s/deploy/stage:
+	aws eks update-kubeconfig --name staging-cluster --region us-east-1 && \
+	doppler secrets substitute deploy.stage.yml | \
+	sed "s/{{AWS_ECR_URL}}/$(AWS_ECR_URL)/g" | \
 	sed "s/{{VERSION}}/$(VERSION)/g" | \
 	sed "s/{{SERVICE}}/$(SERVICE)/g" | \
 	kubectl apply -f -
 
-.PHONY: prerequisite
-prerequisite:
-REQUIRED = aws kubectl git
-K := $(foreach req,$(REQUIRED),\
-        $(if $(shell which $(req)),some string,$(error "No '$(req)' in PATH")))
-AWS_ACCOUNT_ID = $(shell aws sts get-caller-identity --query Account --output text)
-AWS_REGISTRY_ID ?= $(shell aws ecr describe-registry --region us-east-1 --query registryId --output text)
+.PHONY: k8s/deploy/prod
+k8s/deploy/prod: description = Deploy to production
+k8s/deploy/prod:
+	aws eks update-kubeconfig --name staging-cluster --region us-east-1 && \
+	doppler secrets substitute deploy.stage.yml | \
+	sed "s/{{AWS_ECR_URL}}/$(AWS_ECR_URL)/g" | \
+	sed "s/{{VERSION}}/$(VERSION)/g" | \
+	sed "s/{{SERVICE}}/$(SERVICE)/g" | \
+	kubectl apply -f -
 
 .PHONY: env
 env:
 	@echo "AWS_ACCOUNT_ID: $(AWS_ACCOUNT_ID)"
 	@echo "AWS_REGISTRY_ID: $(AWS_REGISTRY_ID)"
+	@echo "AWS_ECR_URL: $(AWS_ECR_URL)"
 	@echo "VERSION: $(VERSION)"
 	@echo "SERVICE: $(SERVICE)"
 	@echo "ARCH: $(ARCH)"
