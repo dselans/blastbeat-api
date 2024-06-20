@@ -17,9 +17,10 @@ spec:
   selector:
     app: {{SERVICE}}
   ports:
-  - protocol: https
+  - name: https
     port: 443
     targetPort: 8080
+  type: LoadBalance
 ---
 apiVersion: apps/v1
 kind: Deployment

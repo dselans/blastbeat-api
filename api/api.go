@@ -10,9 +10,9 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/streamdal/go-svc-template/clog"
-	"github.com/streamdal/go-svc-template/config"
-	"github.com/streamdal/go-svc-template/deps"
+	"github.com/your_org/go-svc-template/clog"
+	"github.com/your_org/go-svc-template/config"
+	"github.com/your_org/go-svc-template/deps"
 )
 
 type API struct {

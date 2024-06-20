@@ -16,10 +16,10 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/streamdal/go-svc-template/backends/cache"
-	"github.com/streamdal/go-svc-template/clog"
-	"github.com/streamdal/go-svc-template/config"
-	"github.com/streamdal/go-svc-template/services/proc"
+	"github.com/your_org/go-svc-template/backends/cache"
+	"github.com/your_org/go-svc-template/clog"
+	"github.com/your_org/go-svc-template/config"
+	"github.com/your_org/go-svc-template/services/proc"
 )
 
 const (

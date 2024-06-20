@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
-	"github.com/streamdal/go-svc-template/api"
-	"github.com/streamdal/go-svc-template/config"
-	"github.com/streamdal/go-svc-template/deps"
+	"github.com/your_org/go-svc-template/api"
+	"github.com/your_org/go-svc-template/config"
+	"github.com/your_org/go-svc-template/deps"
 )
 
 var (

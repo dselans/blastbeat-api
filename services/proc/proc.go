@@ -12,9 +12,9 @@ import (
 	"github.com/streamdal/rabbit"
 	"go.uber.org/zap"
 
-	"github.com/streamdal/go-svc-template/backends/cache"
-	"github.com/streamdal/go-svc-template/clog"
-	"github.com/streamdal/go-svc-template/config"
+	"github.com/your_org/go-svc-template/backends/cache"
+	"github.com/your_org/go-svc-template/clog"
+	"github.com/your_org/go-svc-template/config"
 )
 
 const (

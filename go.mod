@@ -1,4 +1,4 @@
-module github.com/streamdal/go-svc-template
+module github.com/your_org/go-svc-template
 
 go 1.18
 
