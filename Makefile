@@ -119,21 +119,21 @@ docker/run:
 
 ### Kubernetes
 
-.PHONY: k8s/deploy/stage
-k8s/deploy/stage: description = Deploy to staging
-k8s/deploy/stage:
+.PHONY: deploy/stg
+deploy/stage: description = Deploy to staging
+deploy/stage:
 	aws eks update-kubeconfig --name staging-cluster --region us-east-1 && \
-	doppler secrets substitute deploy.stage.yml | \
+	doppler secrets substitute -c stg deploy.stg.yml | \
 	sed "s/{{AWS_ECR_URL}}/$(AWS_ECR_URL)/g" | \
 	sed "s/{{VERSION}}/$(VERSION)/g" | \
 	sed "s/{{SERVICE}}/$(SERVICE)/g" | \
 	kubectl apply -f -
 
-.PHONY: k8s/deploy/prod
-k8s/deploy/prod: description = Deploy to production
-k8s/deploy/prod:
-	aws eks update-kubeconfig --name staging-cluster --region us-east-1 && \
-	doppler secrets substitute deploy.stage.yml | \
+.PHONY: deploy/prd
+deploy/prd: description = Deploy to production
+deploy/prd:
+	aws eks update-kubeconfig --name production-cluster --region us-east-1 && \
+	doppler secrets substitute -c prd deploy.prd.yml | \
 	sed "s/{{AWS_ECR_URL}}/$(AWS_ECR_URL)/g" | \
 	sed "s/{{VERSION}}/$(VERSION)/g" | \
 	sed "s/{{SERVICE}}/$(SERVICE)/g" | \

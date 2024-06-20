@@ -41,8 +41,8 @@ For example:
 
 * To run the service, run `make run`
 * To build + push a docker img, run `make docker/build`
-* To deploy to staging, run `make k8s/deploy/staging`
-* To deploy to production, run `make k8s/deploy/production`
+* To deploy to staging, run `make deploy/stg`
+* To deploy to production, run `make deploy/prd`
 
 ## Secrets
 
@@ -86,9 +86,7 @@ Deployment is _manual_. This is done for one primary reason:
 _Or in other words, we do not throw deployments over the wall. Just because we
 can automate them, does not mean we should or will._
 
-Deployments are performed via `make k8s/deploy/staging` and `make k8s/deploy/production`.
-
-Deployments are just `kubectl apply -f deploy.staging.yaml` under the hood. 
+Deployments are performed via `make deploy/stg` and `make deploy/prd`.
 
 > [!IMPORTANT]  
 > The image the deployment will use is the _CURRENT_ short git sha in the repo!
