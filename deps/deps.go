@@ -235,7 +235,8 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		SkipVerifyTLS:     cfg.ProcessorRabbitSkipVerifyTLS,
 		Log: d.ZapLog.Sugar().With(
 			zap.String("env", cfg.EnvName),
-			zap.String("backend", "rabbit-processor"),
+			zap.String("pkg", "rabbit"),
+			zap.String("backend", "processor"),
 		),
 	})
 	if err != nil {
@@ -263,6 +264,7 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		SkipVerifyTLS:     cfg.PublisherRabbitSkipVerifyTLS,
 		Log: d.ZapLog.Sugar().With(
 			zap.String("env", cfg.EnvName),
+			zap.String("pkg", "rabbit"),
 			zap.String("backend", "rabbit-publisher"),
 		),
 	})
