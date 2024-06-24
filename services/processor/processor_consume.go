@@ -1,4 +1,4 @@
-package proc
+package processor
 
 import (
 	"net"
@@ -13,19 +13,19 @@ const (
 	DialTimeout = 5 * time.Second
 )
 
-// MainConsumeFunc is a consumer function that will be executed by the "rabbit"
+// ConsumeFunc is a consumer function that will be executed by the "rabbit"
 // library whenever Consume() rads a new message from RabbitMQ.
-func (p *Proc) MainConsumeFunc(msg amqp.Delivery) error {
-	logger := p.log.With(zap.String("method", "MainConsumeFunc"))
+func (p *Processor) ConsumeFunc(msg amqp.Delivery) error {
+	logger := p.log.With(zap.String("method", "ConsumeFunc"))
 
-	// MainConsumeFunc runs in goroutuine
+	// ConsumeFunc runs in goroutuine
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Error("recovered from panic", zap.Any("recovered", r))
 		}
 	}()
 
-	txn := p.options.NewRelic.StartTransaction("MainConsumeFunc")
+	txn := p.options.NewRelic.StartTransaction("ConsumeFunc")
 	defer txn.End()
 
 	// logger.Debug("Received message: " + string(msg.Body))

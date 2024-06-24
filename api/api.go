@@ -1,10 +1,12 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"time"
 
 	"github.com/newrelic/go-agent/v3/integrations/nrhttprouter"
 	"github.com/pkg/errors"
@@ -18,6 +20,7 @@ import (
 type API struct {
 	config  *config.Config
 	deps    *deps.Dependencies
+	server  *http.Server
 	log     clog.ICustomLog
 	version string
 }
@@ -38,18 +41,45 @@ func New(cfg *config.Config, d *deps.Dependencies, version string) (*API, error)
 		return nil, errors.New("deps cannot be nil")
 	}
 
-	return &API{
+	server := &http.Server{
+		Addr: cfg.APIListenAddress,
+	}
+
+	a := &API{
 		config:  cfg,
 		deps:    d,
+		server:  server,
 		version: version,
 		log:     d.Log.With(zap.String("pkg", "api")),
-	}, nil
+	}
+
+	// Run shutdown listener
+	go a.runShutdownListener()
+
+	return a, nil
+
+}
+
+func (a *API) runShutdownListener() {
+	<-a.deps.ShutdownCtx.Done()
+
+	// Give server 5s to shutdown gracefully
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := a.server.Shutdown(ctx); err != nil {
+		a.log.Error("Error shutting down API server", zap.Error(err))
+	}
 }
 
 func (a *API) Run() error {
 	logger := a.log.With(zap.String("method", "Run"))
 
 	router := nrhttprouter.New(a.deps.NewRelicApp)
+
+	a.server.Handler = router
+
+	router.HandlerFunc("POST", "/api/v1/webhook", a.webhookHandler)
 
 	router.HandlerFunc("GET", "/health-check", a.healthCheckHandler)
 	router.HandlerFunc("GET", "/version", a.versionHandler)
@@ -61,7 +91,7 @@ func (a *API) Run() error {
 
 	logger.Info("API server running", zap.String("listenAddress", a.config.APIListenAddress))
 
-	return http.ListenAndServe(a.config.APIListenAddress, router)
+	return a.server.ListenAndServe()
 }
 
 // WriteJSON is a helper function for writing JSON responses

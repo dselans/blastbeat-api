@@ -24,21 +24,33 @@ type Config struct {
 	NewRelicAppName    string `kong:"help='New Relic application name.',default='go-svc-template (DEV)'"`
 	NewRelicLicenseKey string `kong:"help='New Relic license key.'"`
 
-	RabbitURL               []string `kong:"help='RabbitMQ server URL(s).',default=amqp://localhost"`
-	RabbitExchangeName      string   `kong:"help='RabbitMQ exchange name',default=events"`
-	RabbitExchangeDeclare   bool     `kong:"help='Whether to declare/create exchange if it does not already exist.',default=true"`
-	RabbitExchangeDurable   bool     `kong:"help='Whether exchange should survive a RabbitMQ server restart.',default=true"`
-	RabbitBindingKeys       []string `kong:"help='Bind the following routing-keys to the queue-name.',default='data-proc'"`
-	RabbitQueueName         string   `kong:"help='RabbitMQ queue name.',default='data-proc'"`
-	RabbitNumConsumers      int      `kong:"help='Number of RabbitMQ consumers.',default=4"`
-	RabbitRetryReconnectSec int      `kong:"help='Interval used for re-connecting to Rabbit (when it goes away).',default=10"`
-	RabbitAutoAck           bool     `kong:"help='Whether to auto-ACK consumed messages. You probably do not want this.',default=false"`
-	RabbitQueueDeclare      bool     `kong:"help='Whether to declare/create queue if it does not already exist.',default=true"`
-	RabbitQueueDurable      bool     `kong:"help='Whether queue and its contents should survive a RabbitMQ server restart.',default=true"`
-	RabbitQueueExclusive    bool     `kong:"help='Whether the queue should only allow 1 specific consumer. You probably do not want this.',default=false"`
-	RabbitQueueAutoDelete   bool     `kong:"help='Whether to auto-delete queue when there are no attached consumers. You probably do not want this.',default=false"`
-	RabbitUseTLS            bool     `kong:"help='RabbitMQ use TLS.',default=false,short='t'"`
-	RabbitSkipVerifyTLS     bool     `kong:"help='RabbitMQ skip TLS verification.',default=false"`
+	ProcessorRabbitURL               []string `kong:"help='RabbitMQ server URL(s).',default=amqp://localhost"`
+	ProcessorRabbitExchangeName      string   `kong:"help='RabbitMQ exchange name',default=events"`
+	ProcessorRabbitExchangeDeclare   bool     `kong:"help='Whether to declare/create exchange if it does not already exist.',default=true"`
+	ProcessorRabbitExchangeDurable   bool     `kong:"help='Whether exchange should survive a RabbitMQ server restart.',default=true"`
+	ProcessorRabbitExchangeType      string   `kong:"help='RabbitMQ exchange type.',enum='direct,fanout,topic,headers',default=topic"`
+	ProcessorRabbitBindingKeys       []string `kong:"help='Bind the following routing-keys to the queue-name.',default='data-proc'"`
+	ProcessorRabbitQueueName         string   `kong:"help='RabbitMQ queue name.',default='data-proc'"`
+	ProcessorRabbitNumConsumers      int      `kong:"help='Number of RabbitMQ consumers.',default=4"`
+	ProcessorRabbitRetryReconnectSec int      `kong:"help='Interval used for re-connecting to Rabbit (when it goes away).',default=10"`
+	ProcessorRabbitAutoAck           bool     `kong:"help='Whether to auto-ACK consumed messages. You probably do not want this.',default=false"`
+	ProcessorRabbitQueueDeclare      bool     `kong:"help='Whether to declare/create queue if it does not already exist.',default=true"`
+	ProcessorRabbitQueueDurable      bool     `kong:"help='Whether queue and its contents should survive a RabbitMQ server restart.',default=true"`
+	ProcessorRabbitQueueExclusive    bool     `kong:"help='Whether the queue should only allow 1 specific consumer. You probably do not want this.',default=false"`
+	ProcessorRabbitQueueAutoDelete   bool     `kong:"help='Whether to auto-delete queue when there are no attached consumers. You probably do not want this.',default=false"`
+	ProcessorRabbitUseTLS            bool     `kong:"help='RabbitMQ use TLS.',default=false"`
+	ProcessorRabbitSkipVerifyTLS     bool     `kong:"help='RabbitMQ skip TLS verification.',default=false"`
+
+	PublisherRabbitURL                []string `kong:"help='RabbitMQ server URL(s).',default=amqp://localhost"`
+	PublisherRabbitExchangeName       string   `kong:"help='RabbitMQ exchange name',default=events"`
+	PublisherRabbitExchangeDeclare    bool     `kong:"help='Whether to declare/create exchange if it does not already exist.',default=true"`
+	PublisherRabbitExchangeDurable    bool     `kong:"help='Whether exchange should survive a RabbitMQ server restart.',default=true"`
+	PublisherRabbitExchangeAutoDelete bool     `kong:"help='Whether to auto-delete exchange when there are no attached queues. You probably do not want this.',default=false"`
+	PublisherRabbitExchangeType       string   `kong:"help='RabbitMQ exchange type.',enum='direct,fanout,topic,headers',default=topic"`
+	PublisherRabbitRetryReconnectSec  int      `kong:"help='Interval used for re-connecting to Rabbit (when it goes away).',default=10"`
+	PublisherRabbitUseTLS             bool     `kong:"help='RabbitMQ use TLS.',default=false"`
+	PublisherRabbitSkipVerifyTLS      bool     `kong:"help='RabbitMQ skip TLS verification.',default=false"`
+	PublisherNumWorkers               int      `kong:"help='Number of publisher workers to run.',default=10"`
 
 	KongContext *kong.Context `kong:"-"`
 }
