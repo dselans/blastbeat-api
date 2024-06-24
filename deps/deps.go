@@ -233,7 +233,10 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		AppID:             cfg.ServiceName + "-processor",
 		UseTLS:            cfg.ProcessorRabbitUseTLS,
 		SkipVerifyTLS:     cfg.ProcessorRabbitSkipVerifyTLS,
-		Log:               d.ZapLog.Sugar(), // TODO: This won't include base attributes
+		Log: d.ZapLog.Sugar().With(
+			zap.String("env", cfg.EnvName),
+			zap.String("backend", "rabbit-processor"),
+		),
 	})
 	if err != nil {
 		return errors.Wrap(err, "unable to create rabbit backend for processor")
@@ -258,7 +261,10 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		AppID:             cfg.ServiceName + "-publisher",
 		UseTLS:            cfg.PublisherRabbitUseTLS,
 		SkipVerifyTLS:     cfg.PublisherRabbitSkipVerifyTLS,
-		Log:               d.ZapLog.Sugar(), // TODO: This won't include base attributes
+		Log: d.ZapLog.Sugar().With(
+			zap.String("env", cfg.EnvName),
+			zap.String("backend", "rabbit-publisher"),
+		),
 	})
 	if err != nil {
 		return errors.Wrap(err, "unable to create rabbit backend for publisher")
