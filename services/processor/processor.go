@@ -84,11 +84,11 @@ func (p *Processor) validateOptions(opts *Options) error {
 
 	for name, c := range opts.RabbitMap {
 		if c.RabbitInstance == nil {
-			return fmt.Errorf("rabbit instance for '%p' cannot be nil", name)
+			return fmt.Errorf("rabbit instance for '%s' cannot be nil", name)
 		}
 
 		if c.Func == "" {
-			return fmt.Errorf("func for '%p' cannot be nil", name)
+			return fmt.Errorf("func for '%s' cannot be nil", name)
 		}
 
 		if c.NumConsumers < 1 {
@@ -99,12 +99,12 @@ func (p *Processor) validateOptions(opts *Options) error {
 		method := reflect.ValueOf(p).MethodByName(c.Func)
 
 		if !method.IsValid() {
-			return fmt.Errorf("method for '%p' appears to be invalid", c.Func)
+			return fmt.Errorf("method for '%s' appears to be invalid", c.Func)
 		}
 
 		f, ok := method.Interface().(func(amqp.Delivery) error)
 		if !ok {
-			return fmt.Errorf("unable to type assert method '%p'", c.Func)
+			return fmt.Errorf("unable to type assert method '%s'", c.Func)
 		}
 
 		opts.RabbitMap[name].funcReal = f
