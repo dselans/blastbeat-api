@@ -220,6 +220,7 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 				ExchangeName:    cfg.ProcessorRabbitExchangeName,
 				ExchangeType:    cfg.ProcessorRabbitExchangeType,
 				ExchangeDeclare: cfg.ProcessorRabbitExchangeDeclare,
+				ExchangeDurable: cfg.ProcessorRabbitExchangeDurable,
 				BindingKeys:     cfg.ProcessorRabbitBindingKeys,
 			},
 		},
@@ -235,7 +236,7 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		Log:               d.ZapLog.Sugar(), // TODO: This won't include base attributes
 	})
 	if err != nil {
-		return errors.Wrap(err, "unable to create new dedicated rabbit backend")
+		return errors.Wrap(err, "unable to create rabbit backend for processor")
 	}
 
 	d.ProcessorRabbitBackend = procRabbitBackend
@@ -246,10 +247,10 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		Bindings: []rabbit.Binding{
 			{
 				ExchangeName:       cfg.PublisherRabbitExchangeName,
+				ExchangeType:       cfg.PublisherRabbitExchangeType,
 				ExchangeDeclare:    cfg.PublisherRabbitExchangeDeclare,
 				ExchangeDurable:    cfg.PublisherRabbitExchangeDurable,
 				ExchangeAutoDelete: cfg.PublisherRabbitExchangeAutoDelete,
-				ExchangeType:       cfg.PublisherRabbitExchangeType,
 			},
 		},
 		Mode:              rabbit.Producer,
@@ -260,7 +261,7 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		Log:               d.ZapLog.Sugar(), // TODO: This won't include base attributes
 	})
 	if err != nil {
-		return errors.Wrap(err, "unable to create new dedicated rabbit backend")
+		return errors.Wrap(err, "unable to create rabbit backend for publisher")
 	}
 
 	d.PublisherRabbitBackend = pubRabbitBackend
