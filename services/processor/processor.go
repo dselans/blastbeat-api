@@ -1,5 +1,5 @@
-// Package proc is used for acting on messages received from RabbitMQ
-package proc
+// Package processor is used for acting on messages received from RabbitMQ
+package processor
 
 import (
 	"context"
@@ -21,7 +21,7 @@ const (
 	DefaultNumConsumers = 10
 )
 
-type IProc interface {
+type IProcessor interface {
 	StartConsumers() error
 }
 
@@ -39,13 +39,13 @@ type RabbitConfig struct {
 	funcReal       func(amqp.Delivery) error // filled out during New()
 }
 
-type Proc struct {
+type Processor struct {
 	config  *config.Config
 	options *Options
 	log     clog.ICustomLog
 }
 
-func New(opt *Options, cfg *config.Config) (*Proc, error) {
+func New(opt *Options, cfg *config.Config) (*Processor, error) {
 	if opt == nil {
 		return nil, errors.New("options cannot be nil")
 	}
@@ -55,7 +55,7 @@ func New(opt *Options, cfg *config.Config) (*Proc, error) {
 	}
 
 	// We have to instantiate this because validateOptions needs access to our instance
-	i := &Proc{
+	i := &Processor{
 		config:  cfg,
 		options: opt,
 	}
@@ -69,7 +69,7 @@ func New(opt *Options, cfg *config.Config) (*Proc, error) {
 	return i, nil
 }
 
-func (p *Proc) validateOptions(opts *Options) error {
+func (p *Processor) validateOptions(opts *Options) error {
 	if opts.Cache == nil {
 		return errors.New("CacheBackend cannot be nil")
 	}
@@ -84,11 +84,11 @@ func (p *Proc) validateOptions(opts *Options) error {
 
 	for name, c := range opts.RabbitMap {
 		if c.RabbitInstance == nil {
-			return fmt.Errorf("rabbit instance for '%p' cannot be nil", name)
+			return fmt.Errorf("rabbit instance for '%s' cannot be nil", name)
 		}
 
 		if c.Func == "" {
-			return fmt.Errorf("func for '%p' cannot be nil", name)
+			return fmt.Errorf("func for '%s' cannot be nil", name)
 		}
 
 		if c.NumConsumers < 1 {
@@ -99,12 +99,12 @@ func (p *Proc) validateOptions(opts *Options) error {
 		method := reflect.ValueOf(p).MethodByName(c.Func)
 
 		if !method.IsValid() {
-			return fmt.Errorf("method for '%p' appears to be invalid", c.Func)
+			return fmt.Errorf("method for '%s' appears to be invalid", c.Func)
 		}
 
 		f, ok := method.Interface().(func(amqp.Delivery) error)
 		if !ok {
-			return fmt.Errorf("unable to type assert method '%p'", c.Func)
+			return fmt.Errorf("unable to type assert method '%s'", c.Func)
 		}
 
 		opts.RabbitMap[name].funcReal = f
@@ -113,7 +113,7 @@ func (p *Proc) validateOptions(opts *Options) error {
 	return nil
 }
 
-func (p *Proc) StartConsumers() error {
+func (p *Processor) StartConsumers() error {
 	logger := p.log.With(zap.String("method", "StartConsumers"))
 	consumerErrCh := make(chan *rabbit.ConsumeError, 1)
 
@@ -130,7 +130,7 @@ func (p *Proc) StartConsumers() error {
 	return nil
 }
 
-func (p *Proc) runConsumerErrorWatcher(errCh chan *rabbit.ConsumeError) {
+func (p *Processor) runConsumerErrorWatcher(errCh chan *rabbit.ConsumeError) {
 	logger := p.log.With(zap.String("method", "runConsumerErrorWatcher"))
 
 	logger.Debug("Starting")
