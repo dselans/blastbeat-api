@@ -121,7 +121,7 @@ docker/run:
 
 .PHONY: deploy/stg
 deploy/stage: description = Deploy to staging
-deploy/stage:
+deploy/stage: check-doppler
 	aws eks update-kubeconfig --name staging-cluster --region us-east-1 && \
 	doppler secrets substitute -c stg deploy.stg.yml | \
 	sed "s/{{AWS_ECR_URL}}/$(AWS_ECR_URL)/g" | \
@@ -131,13 +131,25 @@ deploy/stage:
 
 .PHONY: deploy/prd
 deploy/prd: description = Deploy to production
-deploy/prd:
+deploy/prd: check-doppler
 	aws eks update-kubeconfig --name production-cluster --region us-east-1 && \
 	doppler secrets substitute -c prd deploy.prd.yml | \
 	sed "s/{{AWS_ECR_URL}}/$(AWS_ECR_URL)/g" | \
 	sed "s/{{VERSION}}/$(VERSION)/g" | \
 	sed "s/{{SERVICE}}/$(SERVICE)/g" | \
 	kubectl apply -f -
+
+.PHONY: check-doppler
+check-doppler:
+	@echo "Checking for Doppler token..."
+	@if ! doppler configure get token > /dev/null 2>&1; then \
+		echo "Doppler is not configured. Please log in using 'doppler login'."; \
+		exit 1; \
+ 	fi
+
+	@echo "Checking for missing secrets..."
+	! doppler secrets substitute -p $(SERVICE) -c stg deploy.stg.yml | \
+	grep -B 1 '<no value>'
 
 .PHONY: env
 env:
