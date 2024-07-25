@@ -1,0 +1,119 @@
+# This action will do the following:
+#
+# 1. Run unit and integration tests
+# 2. Build and push docker image for app and server
+# 3. Create a new release tag
+#
+# !!! Deployment is **intentionally manual**, performed via `make deploy/*` !!!
+#
+
+name: Release
+
+on:
+  push:
+    branches:
+    - main
+jobs:
+  release-stg:
+    name: Release (STG)
+    if: ${{ !contains(github.event.head_commit.message, 'norelease') }}
+    environment: staging
+    runs-on: ubuntu-latest-m
+    steps:
+      ## Commented out for now as integration tests are not ran yet ~DS 07.08.2024
+      # - name: Start dependencies
+      #   run: make docker/deps
+      # - name: Wait for dependencies to start up
+      #   uses: jakejarvis/wait-action@master
+      #   with:
+      #     time: '30s'
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Node.js dependencies
+        run: make util/install
+      - name: Cache node modules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Build project locally
+        run: make build/local
+      - name: Run unit tests
+        run: make test/unit
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to AWS ECR
+        run: make util/login-aws-ecr
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+      - name: Build & push docker app image for staging
+        run: make build/docker/app/stg
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+
+  release-prd:
+    name: Release (PRD)
+    if: ${{ !contains(github.event.head_commit.message, 'norelease') }}
+    environment: production
+    runs-on: ubuntu-latest-m
+    steps:
+      ## Commented out for now as integration tests are not ran yet ~DS 07.08.2024
+      # - name: Start dependencies
+      #   run: make docker/deps
+      # - name: Wait for dependencies to start up
+      #   uses: jakejarvis/wait-action@master
+      #   with:
+      #     time: '30s'
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Node.js dependencies
+        run: make util/install
+      - name: Cache node modules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Build project locally
+        run: make build/local
+      - name: Run unit tests
+        run: make test/unit
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to AWS ECR
+        run: make util/login-aws-ecr
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build & push docker server image
+        run: make build/docker/server
+      - name: Create tag
+        uses: mathieudutour/github-tag-action@v6.1
+        id: create_tag
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          fetch_all_tags: true

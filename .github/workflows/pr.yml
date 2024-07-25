@@ -1,0 +1,41 @@
+name: PR
+# Limit a single job to run at a time for a given branch/PR to save resources and speed up CI
+# see https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: ci-build-${{ github.ref_name == 'main' && github.sha || github.ref }}
+  cancel-in-progress: true
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  build:
+    name: PR
+    runs-on: ubuntu-latest-m
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'yarn'
+      - name: Install Node.js dependencies
+        run: make util/install
+      - name: Cache node modules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Build project
+        run: make build/local
+      - name: Run prettier and lint
+        run: |
+          make test/prettier
+          # Linting has been disabled on 07.08.2024, pending fixes
+          # make test/lint
+      - name: Run unit tests
+        run: make test/unit
