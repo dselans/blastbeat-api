@@ -1,404 +1,185 @@
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Service
 metadata:
-  name: superpower-pvc
-  namespace: superpower
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
-  storageClassName: gp2
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: superpower-server
-  namespace: superpower
-  labels:
-    app: superpower-server
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: superpower-server
-  template:
-    metadata:
-      labels:
-        app: superpower-server
-    spec:
-      containers:
-      - name: superpower-server
-        image: __AWS_ECR_URL__/__SERVICE__-server:__VERSION__
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8103
-        env:
-          - name: SUPERPOWER_PORT
-            value: '8103'
-          - name: SUPERPOWER_REGISTER_ENABLED
-            value: 'true'
-          - name: SUPERPOWER_BASE_URL
-            value: '{{ .SUPERPOWER_BASE_URL }}'
-          - name: SUPERPOWER_ISSUER
-            value: '{{ .SUPERPOWER_ISSUER }}'
-          - name: SUPERPOWER_APP_BASE_URL
-            value: '{{ .SUPERPOWER_APP_BASE_URL }}'
-          - name: SUPERPOWER_ALLOWED_ORIGINS
-            value: '{{ .SUPERPOWER_ALLOWED_ORIGINS }}'
-          - name: SUPERPOWER_DATABASE_HOST
-            value: '{{ .SUPERPOWER_DATABASE_HOST }}'
-          - name: SUPERPOWER_DATABASE_PORT
-            value: '{{ .SUPERPOWER_DATABASE_PORT }}'
-          - name: SUPERPOWER_DATABASE_DBNAME
-            value: '{{ .SUPERPOWER_DATABASE_DBNAME }}'
-          - name: SUPERPOWER_DATABASE_USERNAME
-            value: '{{ .SUPERPOWER_DATABASE_USERNAME }}'
-          - name: SUPERPOWER_DATABASE_PASSWORD
-            value: '{{ .SUPERPOWER_DATABASE_PASSWORD }}'
-          - name: SUPERPOWER_ATTACHMENT_STORAGE
-            value: '{{ .SUPERPOWER_ATTACHMENT_STORAGE }}'
-          - name: APP_BUCKET
-            value: '{{ .APP_BUCKET }}'
-          - name: AWS_DISTRIBUTION_ID
-            value: '{{ .AWS_DISTRIBUTION_ID }}'
-          - name: AWS_REGION
-            value: '{{ .AWS_REGION }}'
-          - name: AWS_ACCESS_KEY_ID
-            value: '{{ .AWS_ACCESS_KEY_ID }}'
-          - name: AWS_SECRET_ACCESS_KEY
-            value: '{{ .AWS_SECRET_ACCESS_KEY }}'
-          - name: SUPERPOWER_TEMPORAL_HOST
-            value: 'superpower-temporal.temporal'
-          - name: NODE_ENV
-            value: 'staging'
-          - name: MEDPLUM_CLIENT_BASE_URL
-            value: 'https://medplum-server.superpower-staging.com/'
-          - name: MEDPLUM_CLIENT_ID
-            value: '9a57917f-7764-4087-8b5c-f132a38f351a'
-          - name: MEDPLUM_CLIENT_SECRET
-            value: '775789bfc8826e47db9e554517b7681d4d58f8c3c69bb2fd3e66df3f778b8a73'
-          - name: SUPERPOWER_BIRD_ACCESS_TOKEN
-            value: '{{ .SUPERPOWER_BIRD_ACCESS_TOKEN }}'
-          - name: SUPERPOWER_BIRD_BASE_MEDIA_URL
-            value: '{{ .SUPERPOWER_BIRD_BASE_MEDIA_URL }}'
-          - name: SUPERPOWER_BIRD_BASE_URL
-            value: '{{ .SUPERPOWER_BIRD_BASE_URL }}'
-          - name: SUPERPOWER_BIRD_EMAIL_CHANNEL_ID
-            value: '{{ .SUPERPOWER_BIRD_EMAIL_CHANNEL_ID }}'
-          - name: SUPERPOWER_BIRD_SMS_CHANNEL_ID
-            value: '{{ .SUPERPOWER_BIRD_SMS_CHANNEL_ID }}'
-          - name: SUPERPOWER_BIRD_WORKSPACE_ID
-            value: '{{ .SUPERPOWER_BIRD_WORKSPACE_ID }}'
-          - name: SUPERPOWER_DOCK_HEALTH_API_KEY
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_API_KEY }}'
-          - name: SUPERPOWER_DOCK_HEALTH_API_URL
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_API_URL }}'
-          - name: SUPERPOWER_DOCK_HEALTH_AUTH_URL
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_AUTH_URL }}'
-          - name: SUPERPOWER_DOCK_HEALTH_CLIENT_ID
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_CLIENT_ID }}'
-          - name: SUPERPOWER_DOCK_HEALTH_CLIENT_SECRET
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_CLIENT_SECRET }}'
-          - name: SUPERPOWER_DOCK_HEALTH_ORG_ID
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_ORG_ID }}'
-          - name: SUPERPOWER_DOCK_HEALTH_USER_ID
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_USER_ID }}'
-          - name: SUPERPOWER_GETLABS_CLIENT_ID
-            value: '{{ .SUPERPOWER_GETLABS_CLIENT_ID }}'
-          - name: SUPERPOWER_GETLABS_SECRET
-            value: '{{ .SUPERPOWER_GETLABS_SECRET }}'
-          - name: SUPERPOWER_GETLABS_URL
-            value: '{{ .SUPERPOWER_GETLABS_URL }}'
-          - name: SUPERPOWER_SHOPIFY_API_SECRET_KEY
-            value: '{{ .SUPERPOWER_SHOPIFY_API_SECRET_KEY }}'
-          - name: SUPERPOWER_SHOPIFY_DOMAIN
-            value: '{{ .SUPERPOWER_SHOPIFY_DOMAIN }}'
-          - name: SUPERPOWER_STRIPE_SECRET_KEY
-            value: '{{ .SUPERPOWER_STRIPE_SECRET_KEY }}'
-          - name: SUPERPOWER_TEMPORAL_NAMESPACE
-            value: '{{ .SUPERPOWER_TEMPORAL_NAMESPACE }}'
-          - name: SUPERPOWER_TEMPORAL_PORT
-            value: '{{ .SUPERPOWER_TEMPORAL_PORT }}'
-          - name: SUPERPOWER_VITAL_API_KEY
-            value: '{{ .SUPERPOWER_VITAL_API_KEY }}'
-          - name: SUPERPOWER_ZAPIER_ACCOUNT_ID
-            value: '{{ .SUPERPOWER_ZAPIER_ACCOUNT_ID }}'
-          - name: SUPERPOWER_ZAPIER_BASE_URL
-            value: '{{ .SUPERPOWER_ZAPIER_BASE_URL }}'
-          - name: SUPERPOWER_ZAPIER_EMAIL_ID
-            value: '{{ .SUPERPOWER_ZAPIER_EMAIL_ID }}'
-          - name: SUPERPOWER_ZAPIER_OPEN_PHONE_ID
-            value: '{{ .SUPERPOWER_ZAPIER_OPEN_PHONE_ID }}'
-          - name: SUPERPOWER_ZAPIER_SLACK_ID
-            value: '{{ .SUPERPOWER_ZAPIER_SLACK_ID }}'
-          - name: SUPERPOWER_ZAPIER_SMS_ID
-            value: '{{ .SUPERPOWER_ZAPIER_SMS_ID }}'
-          - name: NEW_RELIC_APP_NAME
-            value: 'superpower-server (STG)'
-          - name: NEW_RELIC_LICENSE_KEY
-            value: '{{ .NEW_RELIC_LICENSE_KEY }}'
-          - name: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_ENABLED
-            value: 'true'
-          - name: SUPERPOWER_SIGNING_KEY
-            value: {{ tojson .SUPERPOWER_SIGNING_KEY }}
-          - name: SUPERPOWER_SIGNING_KEY_ID
-            value: '{{ .SUPERPOWER_SIGNING_KEY_ID }}'
-          - name: SUPERPOWER_SIGNING_KEY_PASSPHRASE
-            value: '{{ .SUPERPOWER_SIGNING_KEY_PASSPHRASE }}'
-          - name: SUPERPOWER_SUPPORT_EMAIL
-            value: 'superpower@superpower.com'
-          - name: SUPERPOWER_STORAGE_DOMAIN_NAME
-            value: '{{ .SUPERPOWER_STORAGE_DOMAIN_NAME }}'
-          - name: SUPERPOWER_STORAGE_BUCKET_NAME
-            value: '{{ .SUPERPOWER_STORAGE_BUCKET_NAME }}'
-          - name: SUPERPOWER_KLAVIYO_PRIVATE_KEY
-            value: '{{ .SUPERPOWER_KLAVIYO_PRIVATE_KEY }}'
+  name: __SERVICE__
+  namespace: default
 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: superpower-server
-  namespace: superpower
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
-    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
-    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:us-east-1:554179259394:certificate/dc505934-95e6-49a0-b9fd-df2092b3c050"
-    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
-    external-dns.alpha.kubernetes.io/hostname: "api.superpower-staging.com."
+## If this service needs to be publically accessible, uncomment the following
+## annotations - k8s will create an AWS ELB for you for the specified hostname.
+#
+#  annotations:
+#    external-dns.alpha.kubernetes.io/hostname: __SERVICE__.superpower-staging.com
+#    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-east-1:554179259394:certificate/dc505934-95e6-49a0-b9fd-df2092b3c050
+#    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+#    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+
 spec:
   selector:
-    app: superpower-server
+    app: __SERVICE__
   ports:
-  - name: http
-    protocol: TCP
-    port: 80
-    targetPort: 8103
   - name: https
-    protocol: TCP
     port: 443
-    targetPort: 8103
-  type: LoadBalancer
+    targetPort: 8080
+  type: LoadBalance
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: superpower-worker
-  namespace: superpower
+  name: __SERVICE__
+  namespace: default
   labels:
-    app: superpower-worker
+    app: __SERVICE__
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: superpower-worker
+      app: __SERVICE__
   template:
     metadata:
       labels:
-        app: superpower-worker
+        app: __SERVICE__
     spec:
       containers:
-      - name: superpower-worker
-        image: __AWS_ECR_URL__/__SERVICE__-server:__VERSION__
-        imagePullPolicy: Always
+      - name: __SERVICE__
+        image: __AWS_ECR_URL__/__SERVICE__:__VERSION__
         ports:
-        - containerPort: 8200
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "256m"
+          limits:
+            memory: "512Mi"
+            cpu: "512m"
+        livenessProbe:
+          httpGet:
+            path: /health-check
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
         env:
-          - name: SUPERPOWER_PORT
-            value: '8200'
-          - name: SUPERPOWER_REGISTER_ENABLED
-            value: 'true'
-          - name: SUPERPOWER_BASE_URL
-            value: '{{ .SUPERPOWER_BASE_URL }}'
-          - name: SUPERPOWER_ISSUER
-            value: '{{ .SUPERPOWER_ISSUER }}'
-          - name: SUPERPOWER_APP_BASE_URL
-            value: '{{ .SUPERPOWER_APP_BASE_URL }}'
-          - name: SUPERPOWER_ALLOWED_ORIGINS
-            value: '{{ .SUPERPOWER_ALLOWED_ORIGINS }}'
-          - name: SUPERPOWER_DATABASE_HOST
-            value: '{{ .SUPERPOWER_DATABASE_HOST }}'
-          - name: SUPERPOWER_DATABASE_PORT
-            value: '{{ .SUPERPOWER_DATABASE_PORT }}'
-          - name: SUPERPOWER_DATABASE_DBNAME
-            value: '{{ .SUPERPOWER_DATABASE_DBNAME }}'
-          - name: SUPERPOWER_DATABASE_USERNAME
-            value: '{{ .SUPERPOWER_DATABASE_USERNAME }}'
-          - name: SUPERPOWER_DATABASE_PASSWORD
-            value: '{{ .SUPERPOWER_DATABASE_PASSWORD }}'
-          - name: SUPERPOWER_ATTACHMENT_STORAGE
-            value: 'file:./storage/'
-          - name: SUPERPOWER_TEMPORAL_HOST
-            value: 'superpower-temporal.temporal'
-          - name: NODE_ENV
-            value: 'staging'
-          - name: MEDPLUM_CLIENT_BASE_URL
-            value: 'http://medplum-server:8103'
-          - name: MEDPLUM_CLIENT_ID
-            value: '9a57917f-7764-4087-8b5c-f132a38f351a'
-          - name: MEDPLUM_CLIENT_SECRET
-            value: '775789bfc8826e47db9e554517b7681d4d58f8c3c69bb2fd3e66df3f778b8a73'
-          - name: SUPERPOWER_BIRD_ACCESS_TOKEN
-            value: '{{ .SUPERPOWER_BIRD_ACCESS_TOKEN }}'
-          - name: SUPERPOWER_BIRD_BASE_MEDIA_URL
-            value: '{{ .SUPERPOWER_BIRD_BASE_MEDIA_URL }}'
-          - name: SUPERPOWER_BIRD_BASE_URL
-            value: '{{ .SUPERPOWER_BIRD_BASE_URL }}'
-          - name: SUPERPOWER_BIRD_EMAIL_CHANNEL_ID
-            value: '{{ .SUPERPOWER_BIRD_EMAIL_CHANNEL_ID }}'
-          - name: SUPERPOWER_BIRD_SMS_CHANNEL_ID
-            value: '{{ .SUPERPOWER_BIRD_SMS_CHANNEL_ID }}'
-          - name: SUPERPOWER_BIRD_WORKSPACE_ID
-            value: '{{ .SUPERPOWER_BIRD_WORKSPACE_ID }}'
-          - name: SUPERPOWER_DOCK_HEALTH_API_KEY
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_API_KEY }}'
-          - name: SUPERPOWER_DOCK_HEALTH_API_URL
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_API_URL }}'
-          - name: SUPERPOWER_DOCK_HEALTH_AUTH_URL
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_AUTH_URL }}'
-          - name: SUPERPOWER_DOCK_HEALTH_CLIENT_ID
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_CLIENT_ID }}'
-          - name: SUPERPOWER_DOCK_HEALTH_CLIENT_SECRET
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_CLIENT_SECRET }}'
-          - name: SUPERPOWER_DOCK_HEALTH_ORG_ID
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_ORG_ID }}'
-          - name: SUPERPOWER_DOCK_HEALTH_USER_ID
-            value: '{{ .SUPERPOWER_DOCK_HEALTH_USER_ID }}'
-          - name: SUPERPOWER_GETLABS_CLIENT_ID
-            value: '{{ .SUPERPOWER_GETLABS_CLIENT_ID }}'
-          - name: SUPERPOWER_GETLABS_SECRET
-            value: '{{ .SUPERPOWER_GETLABS_SECRET }}'
-          - name: SUPERPOWER_GETLABS_URL
-            value: '{{ .SUPERPOWER_GETLABS_URL }}'
-          - name: SUPERPOWER_SHOPIFY_API_SECRET_KEY
-            value: '{{ .SUPERPOWER_SHOPIFY_API_SECRET_KEY }}'
-          - name: SUPERPOWER_SHOPIFY_DOMAIN
-            value: '{{ .SUPERPOWER_SHOPIFY_DOMAIN }}'
-          - name: SUPERPOWER_STRIPE_SECRET_KEY
-            value: '{{ .SUPERPOWER_STRIPE_SECRET_KEY }}'
-          - name: SUPERPOWER_TEMPORAL_NAMESPACE
-            value: '{{ .SUPERPOWER_TEMPORAL_NAMESPACE }}'
-          - name: SUPERPOWER_TEMPORAL_PORT
-            value: '{{ .SUPERPOWER_TEMPORAL_PORT }}'
-          - name: SUPERPOWER_VITAL_API_KEY
-            value: '{{ .SUPERPOWER_VITAL_API_KEY }}'
-          - name: SUPERPOWER_ZAPIER_ACCOUNT_ID
-            value: '{{ .SUPERPOWER_ZAPIER_ACCOUNT_ID }}'
-          - name: SUPERPOWER_ZAPIER_BASE_URL
-            value: '{{ .SUPERPOWER_ZAPIER_BASE_URL }}'
-          - name: SUPERPOWER_ZAPIER_EMAIL_ID
-            value: '{{ .SUPERPOWER_ZAPIER_EMAIL_ID }}'
-          - name: SUPERPOWER_ZAPIER_OPEN_PHONE_ID
-            value: '{{ .SUPERPOWER_ZAPIER_OPEN_PHONE_ID }}'
-          - name: SUPERPOWER_ZAPIER_SLACK_ID
-            value: '{{ .SUPERPOWER_ZAPIER_SLACK_ID }}'
-          - name: SUPERPOWER_ZAPIER_SMS_ID
-            value: '{{ .SUPERPOWER_ZAPIER_SMS_ID }}'
-          - name: SUPERPOWER_SIGNING_KEY
-            value: {{ tojson .SUPERPOWER_SIGNING_KEY }}
-          - name: SUPERPOWER_SIGNING_KEY_ID
-            value: '{{ .SUPERPOWER_SIGNING_KEY_ID }}'
-          - name: SUPERPOWER_SIGNING_KEY_PASSPHRASE
-            value: '{{ .SUPERPOWER_SIGNING_KEY_PASSPHRASE }}'
-          - name: SUPERPOWER_SUPPORT_EMAIL
-            value: 'superpower@superpower.com'
-          - name: NEW_RELIC_APP_NAME
-            value: 'superpower-worker (STG)'
-          - name: NEW_RELIC_LICENSE_KEY
-            value: '{{ .NEW_RELIC_LICENSE_KEY }}'
-            value: 'superpower@superpower.com'
-          - name: SUPERPOWER_STORAGE_DOMAIN_NAME
-            value: '{{ .SUPERPOWER_STORAGE_DOMAIN_NAME }}'
-          - name: SUPERPOWER_STORAGE_BUCKET_NAME
-            value: '{{ .SUPERPOWER_STORAGE_BUCKET_NAME }}'
-          - name: SUPERPOWER_KLAVIYO_PRIVATE_KEY
-            value: '{{ .SUPERPOWER_KLAVIYO_PRIVATE_KEY }}'
-        command: ['node', 'packages/server/dist/worker.js', 'env']
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: superpower-worker
-  namespace: superpower
-spec:
-  selector:
-    app: superpower-worker
-  ports:
-  - protocol: TCP
-    port: 8200
-    targetPort: 8200
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: postgres
-  namespace: superpower
-  labels:
-    app: postgres
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:12
-        ports:
-        - containerPort: 5432
-        env:
-          - name: POSTGRES_USER
-            value: 'superpower'
-          - name: POSTGRES_PASSWORD
-            value: 'superpower'
-        volumeMounts:
-        - name: postgres-config
-          mountPath: /usr/local/etc/postgres/postgres.conf
-          subPath: postgres.conf
-        - name: postgres-init
-          mountPath: /docker-entrypoint-initdb.d/
-      volumes:
-      - name: postgres-config
-        configMap:
-          name: postgres-config
-      - name: postgres-init
-        configMap:
-          name: postgres-init
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: postgres-config
-  namespace: superpower
-data:
-  postgres.conf: |
-    listen_addresses = '*'
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: postgres-init
-  namespace: superpower
-data:
-  init_test.sql: |
-    CREATE DATABASE superpower_test;
-    GRANT ALL PRIVILEGES ON DATABASE superpower_test TO superpower;
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-  namespace: superpower
-spec:
-  selector:
-    app: postgres
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
+        # Name of the service (used in health-check, version)
+        - name: GO_SVC_TEMPLATE_SERVICE_NAME
+          value: "go-svc-template"
+
+        # HTTP port the service will bind its API server to
+        - name: GO_SVC_TEMPLATE_API_LISTEN_ADDRESS
+          value: ":8080"
+
+        # Service uses 'uber/zap' for logging; it has two available log "modes":
+        # 'dev' and 'prod'. 'dev' causes logs to be colorized and human-readable;
+        # 'prod' will log in JSON format w/o colors.
+        - name: GO_SVC_TEMPLATE_LOG_CONFIG
+          value: "dev"
+
+        # Whether to enable pprof endpoints
+        - name: GO_SVC_TEMPLATE_ENABLE_PPROF
+          value: "true"
+
+        # New Relic license key; remove if not using New Relic
+        - name: GO_SVC_TEMPLATE_NEW_RELIC_LICENSE_KEY
+          value: "{{ .GO_SVC_TEMPLATE_NEW_RELIC_LICENSE_KEY }}"
+
+        # If using NR, how the service will be identified in NR UI
+        - name: GO_SVC_TEMPLATE_NEW_RELIC_APP_NAME
+          value: "go-svc-template (STG)"
+
+        ################ RabbitMQ Consumer / Processor Config #################
+
+        # RabbitMQ URL (expects full DSN)
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_URL
+          value: "{{ .GO_SVC_TEMPLATE_PROCESSOR_RABBIT_URL }}"
+
+        # Routing key used for publishing messages
+        #
+        # NOTE: Only applicable when 'rabbit' lib is in 'publisher' or 'both' mode.
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_ROUTING_KEY
+          value: "routing-key-used-by-publisher"
+
+        # Name of the exchange queue will be bound to.
+        #
+        # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_EXCHANGE_NAME
+          value: "events"
+
+        # Whether the service should create the exchange if it doesn't exist.
+        #
+        # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_EXCHANGE_DECLARE
+          value: "true"
+
+        # When true, the exchange will be created with durable flag so it will
+        # be able to survive a broker restart.
+        #
+        # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_EXCHANGE_DURABLE
+          value: "true"
+
+        # What routing key consumers will bind to. NOTE: Use '#' for wildcards.
+        #
+        # Example 1: "events.webhooks.wearable" will cause rabbitmq to forward
+        # only wearable webhook events to 'GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_NAME'.
+        #
+        # Example 2: "events.webhooks.#" will cause rabbitmq to forward all
+        # webhook events to 'GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_NAME'.
+        #
+        # Example 3: "events.#.wearable" will cause rabbitmq to forward ALL
+        # wearable events to 'GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_NAME'.
+        #
+        # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_BINDING_KEYS
+          value: "routing-key-to-bind-to"
+
+        # When left empty, rabbitmq will generate a random queue name. This
+        # effectively means that all consumers will receive a COPY of the
+        # message when binding to same routing key. This is a good pattern for
+        # implementing broadcast/fanout-like behavior.
+        #
+        # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_NAME
+          value: "go-svc-template"
+
+        # Whether the service should create the queue if it doesn't exist
+        #
+        # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_DECLARE
+          value: "true"
+
+        # When true, the queue will be created with durable flag so it will
+        # be able to survive a broker restart.
+        #
+        # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_DURABLE
+          value: "true"
+
+        # When true, rabbitmq will delete the queue when the queue no longer
+        # has any consumers. You probably don't want this.
+        #
+        # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_AUTO_DELETE
+          value: "false"
+
+        # When true, the queue can only be accessed by exactly one consumer.
+        # You probably don't want this.
+        #
+        # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_EXCLUSIVE
+          value: "false"
+
+        # Determines the size of the consumer worker pool
+        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_NUM_CONSUMERS
+          value: "4"
+
+        ################ RabbitMQ Producer / Publisher Config #################
+
+        - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_URL
+          value: {{ .GO_SVC_TEMPLATE_PUBLISHER_RABBIT_URL }}
+
+        - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_EXCHANGE_NAME
+          value: "events"
+
+        - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_EXCHANGE_DECLARE
+          value: "true"
+
+        - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_EXCHANGE_DURABLE
+          value: "true"
