@@ -211,8 +211,8 @@ check-doppler-token:
 .PHONY: check-doppler-secrets
 check-doppler-secrets:
 	@bash $(SHARED_SCRIPT) info "Checking for missing secrets ..."
-	@if doppler secrets substitute -p $(SERVICE) -c $(DOPPLER_ENV) $(DEPLOYMENT_DIR)/deploy.$(DOPPLER_ENV).yml | grep -B 1 "<no value>"; then \
-		bash $(SHARED_SCRIPT) fatal "Found missing secret(s) in '$(DEPLOYMENT_DIR)/deploy.$(DOPPLER_ENV).yml'"; \
+	@if doppler secrets substitute -p $(SERVICE) -c $(DOPPLER_ENV) ./deploy.$(DOPPLER_ENV).yml | grep -B 1 "<no value>"; then \
+		bash $(SHARED_SCRIPT) fatal "Found missing secret(s) in './deploy.$(DOPPLER_ENV).yml'"; \
 	fi
 
 .PHONY: prereq
