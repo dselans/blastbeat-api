@@ -25,4 +25,4 @@ jobs:
     - name: Test
       run: sudo make test
       env:
-        - GITHUB_ACTIONS: 'true'
+        GITHUB_ACTIONS: 'true'
