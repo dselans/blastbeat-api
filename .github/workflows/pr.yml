@@ -23,6 +23,4 @@ jobs:
         time: '30s'
 
     - name: Test
-      run: sudo make test
-      env:
-        GITHUB_ACTIONS: 'true'
+      run: make test
