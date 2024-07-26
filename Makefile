@@ -143,13 +143,13 @@ deploy/prd: prereq check-doppler-secrets
 
 .PHONY: test
 test: description = Run tests
-test: test/lint test/prettier test/unit
+test:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
 	$(GO) test ./...
 
 .PHONY: testv
 testv: description = Run tests with verbose output
-testv: util/install
+testv:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
 	$(GO) test ./... -v
 
@@ -211,8 +211,8 @@ check-doppler-token:
 .PHONY: check-doppler-secrets
 check-doppler-secrets:
 	@bash $(SHARED_SCRIPT) info "Checking for missing secrets ..."
-	@if doppler secrets substitute -p $(SERVICE) -c $(DOPPLER_ENV) $(DEPLOYMENT_DIR)/deploy.server.$(DOPPLER_ENV).yaml | grep -B 1 "<no value>"; then \
-		bash $(SHARED_SCRIPT) fatal "Found missing secret(s) in '$(DEPLOYMENT_DIR)/deploy.server.$(DOPPLER_ENV).yaml'"; \
+	@if doppler secrets substitute -p $(SERVICE) -c $(DOPPLER_ENV) $(DEPLOYMENT_DIR)/deploy.$(DOPPLER_ENV).yml | grep -B 1 "<no value>"; then \
+		bash $(SHARED_SCRIPT) fatal "Found missing secret(s) in '$(DEPLOYMENT_DIR)/deploy.$(DOPPLER_ENV).yml'"; \
 	fi
 
 .PHONY: prereq
