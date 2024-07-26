@@ -3,19 +3,28 @@ go-svc-template
 
 ⚡ Batteries-included Golang microservice template ⚡️
 
-_Last updated: 06/18/2024_
+_Last updated: 07/25/2024_
+
+## Changelog
+
+* **07/25/2024**
+     * Updated `Makefile` (and helpers) to match latest changes in [superpower repo](https://github.com/superpowerdotcom/superpower)
+     * Updated github workflows to match superpower repo
+     * Updated `deploy.*.yml` files to match superpower repo
+
+## Overview
 
 **It includes:**
 
 1. `Makefile` that is used for run, test, build, deploy actions
 1. `Dockerfile` for building a Docker image (`alpine` with multi-stage build)
 1. `docker-compose.yml` for local dev
-1. Github workflows for [PR](.github/workflows/go-svc-template-pr.yml) and 
-[release](.github/workflows/go-svc-template-release.yml) automation
+1. Github workflows for [PR](.github/workflows/pr.yml) and 
+[release](.github/workflows/release.yml) automation
 1. Sane code layout [1]
 1. Structured logging
 1. Good health-checking practices (uses async health-checking)
-1. Sample [kubernetes deploy configs](deploy.stage.old.yml)
+1. Sample [kubernetes deploy configs](deploy.stg.yml)
 1. Configurable profiling support (pprof)
 1. Pre-instrumented with [New Relic APM](https://newrelic.com)
 1. Supports AWS EKS and ECR
@@ -35,21 +44,30 @@ dependency injection in tests, `backends` and `services` abstraction for busines
 logic.</sub>
 
 ## Makefile
+
 All actions are performed via `make` - run `make help` to see list of available make args (targets).
 
 For example:
 
 * To run the service, run `make run`
-* To build + push a docker img, run `make docker/build`
+* To build + push a docker img, run `make build/docker`
 * To deploy to staging, run `make deploy/stg`
 * To deploy to production, run `make deploy/prd`
 
 ## Secrets
 
-Secrets are managed via [Doppler](https://doppler.com/) -- a SaaS secrets management
-solution.
+Secrets are managed via [Doppler](https://doppler.com/) -- a SaaS secrets management solution.
 
-<TODO>: Add details
+When starting fresh:
+
+1. Create a `project` in Doppler called `go-svc-template`
+    1. This will create `Dev`, `Staging` and `Production` environments
+1. Define env vars for specific environments in Doppler UI
+1. Expose same secrets in `go-svc-template` config, in [`docker-compose.yml`](docker-compose.yml)
+and the `deploy.stg.yml` and `deploy.prd.yml` files.
+
+When you perform a `make deploy/stg` or `make deploy/prd`, the secrets will be
+fetched from Doppler and injected into the deploy configs.
 
 ## Logging
 
@@ -71,10 +89,10 @@ The custom log wrapper provides this functionality.
 
 PR and release automation is done via GitHub Actions.
 
-When a PR is opened, a [PR workflow](.github/workflows/go-svc-template-pr.yml)
+When a PR is opened, a [PR workflow](.github/workflows/pr.yml)
 is triggered.
 
-When a PR is merged, a [Release workflow](.github/workflows/go-svc-template-release.yml)
+When a PR is merged, a [Release workflow](.github/workflows/release.yml)
 is triggered. This workflow will build a docker image and push it to AWS ECR.
 
 ## Deployment
@@ -90,6 +108,8 @@ Deployments are performed via `make deploy/stg` and `make deploy/prd`.
 
 > [!IMPORTANT]  
 > The image the deployment will use is the _CURRENT_ short git sha in the repo!
+
+Read [here](https://www.notion.so/superpowerhealth/Deployment-Philosophy-6dc50c833220473e93482313a550c87e) to learn about the deployment philosophy at Superpower.
 
 ---
 
@@ -110,6 +130,6 @@ Deployments are performed via `make deploy/stg` and `make deploy/prd`.
 
 ## Vendor
 
-This template vendors packages by default to ensure reproducible builds + allow
+This app vendors packages by default to ensure reproducible builds + allow
 local dev without an internet connection. Vendor can introduce its own headaches
 though - if you want to remove it, remove `-mod=vendor` in the [`Makefile`](Makefile).

@@ -4,8 +4,8 @@ metadata:
   name: __SERVICE__
   namespace: default
 
-# If this service needs to be publically accessible, uncomment the following
-# annotations - k8s will create an AWS ELB for you for the specified hostname.
+## If this service needs to be publically accessible, uncomment the following
+## annotations - k8s will create an AWS ELB for you for the specified hostname.
 #
 #  annotations:
 #    external-dns.alpha.kubernetes.io/hostname: __SERVICE__.superpower.com
@@ -20,7 +20,7 @@ spec:
   - name: https
     port: 443
     targetPort: 8080
-  type: LoadBalance
+  type: LoadBalancer
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -78,7 +78,7 @@ spec:
 
         # New Relic license key; remove if not using New Relic
         - name: GO_SVC_TEMPLATE_NEW_RELIC_LICENSE_KEY
-          value: "{{ .NEW_RELIC_LICENSE_KEY }}"
+          value: "{{ .GO_SVC_TEMPLATE_NEW_RELIC_LICENSE_KEY }}"
 
         # If using NR, how the service will be identified in NR UI
         - name: GO_SVC_TEMPLATE_NEW_RELIC_APP_NAME
@@ -86,7 +86,7 @@ spec:
 
         # RabbitMQ URL (expects full DSN)
         - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_URL
-          value: "{{ .PROCESSOR_RABBIT_URL }}"
+          value: "{{ .GO_SVC_TEMPLATE_PROCESSOR_RABBIT_URL }}"
 
         # Routing key used for publishing messages.
         #
@@ -171,7 +171,7 @@ spec:
         ################ RabbitMQ Producer / Publisher Config #################
 
         - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_URL
-          value: {{ .PUBLISHER_RABBIT_URL }}
+          value: {{ .GO_SVC_TEMPLATE_PUBLISHER_RABBIT_URL }}
 
         - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_EXCHANGE_NAME
           value: "events"

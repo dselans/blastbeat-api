@@ -79,8 +79,9 @@ func (a *API) Run() error {
 
 	a.server.Handler = router
 
+	// Example rabbitmq handler(s)
+	router.HandlerFunc("GET", "/api/v1/publish", a.rabbitPublishHandler)
 	router.HandlerFunc("POST", "/api/v1/webhook", a.webhookHandler)
-
 	router.HandlerFunc("GET", "/health-check", a.healthCheckHandler)
 	router.HandlerFunc("GET", "/version", a.versionHandler)
 
