@@ -115,6 +115,11 @@ github.com/sirupsen/logrus
 github.com/streamdal/rabbit
 # github.com/stretchr/testify v1.8.4
 ## explicit; go 1.20
+# github.com/superpowerdotcom/events v0.0.2
+## explicit; go 1.20
+github.com/superpowerdotcom/events/codegen/protos/go/bridgeport
+github.com/superpowerdotcom/events/codegen/protos/go/common
+github.com/superpowerdotcom/events/codegen/protos/go/metriport
 # go.uber.org/multierr v1.11.0
 ## explicit; go 1.19
 go.uber.org/multierr

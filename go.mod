@@ -33,6 +33,7 @@ require (
 	github.com/relistan/go-director v0.0.0-20240410125439-78829fce487d // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
+	github.com/superpowerdotcom/events v0.0.2 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect

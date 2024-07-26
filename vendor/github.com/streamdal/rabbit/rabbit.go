@@ -440,7 +440,7 @@ func (r *Rabbit) ConsumeOnce(ctx context.Context, runFunc func(msg amqp.Delivery
 		}
 	case <-ctx.Done():
 		r.log.Warn("stopped via context")
-		return nil
+		return context.DeadlineExceeded
 	case <-r.ctx.Done():
 		r.log.Warn("stopped via Stop()")
 		return nil
