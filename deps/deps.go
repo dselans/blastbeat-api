@@ -273,7 +273,7 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		QueueAutoDelete:   cfg.ProcessorRabbitQueueAutoDelete,
 		QueueDeclare:      cfg.ProcessorRabbitQueueDeclare,
 		AutoAck:           cfg.ProcessorRabbitAutoAck,
-		AppID:             cfg.ServiceName + "-processor",
+		ConsumerTag:       cfg.ServiceName + "-processor",
 		UseTLS:            cfg.ProcessorRabbitUseTLS,
 		SkipVerifyTLS:     cfg.ProcessorRabbitSkipVerifyTLS,
 		Log: d.ZapLog.Sugar().With(
