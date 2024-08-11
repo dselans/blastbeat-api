@@ -1,16 +1,12 @@
 package processor
 
 import (
-	"net"
-	"net/http"
-	"time"
-
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/superpowerdotcom/events/codegen/protos/go/common"
 	"go.uber.org/zap"
-)
+	"google.golang.org/protobuf/proto"
 
-const (
-	DialTimeout = 5 * time.Second
+	"github.com/your_org/go-svc-template/validate"
 )
 
 // ConsumeFunc is a consumer function that will be executed by the "rabbit"
@@ -28,7 +24,9 @@ func (p *Processor) ConsumeFunc(msg amqp.Delivery) error {
 	txn := p.options.NewRelic.StartTransaction("ConsumeFunc")
 	defer txn.End()
 
-	// logger.Debug("Received message: " + string(msg.Body))
+	logger = logger.With(zap.String("routingKey", msg.RoutingKey))
+
+	logger.Debug("Received (unvalidated) message on event bus")
 
 	// !!!!
 	//
@@ -44,19 +42,44 @@ func (p *Processor) ConsumeFunc(msg amqp.Delivery) error {
 		return nil
 	}
 
-	// Do something with the delivered message
+	// Try to decode message and dispatch it accordingly
+	event := &common.Event{}
 
-	return nil
-}
-
-func newClient() *http.Client {
-	client := http.Client{
-		Transport: &http.Transport{
-			DialContext: (&net.Dialer{
-				Timeout: DialTimeout,
-			}).DialContext,
-		},
+	if err := proto.Unmarshal(msg.Body, event); err != nil {
+		// TODO: Record error in NR
+		logger.Error("Error unmarshalling event", zap.Error(err))
+		return nil
 	}
 
-	return &client
+	if err := validate.Event(event); err != nil {
+		// TODO: Record error in NR
+		logger.Error("Error validating event", zap.Error(err))
+		return nil
+	}
+
+	logger = logger.With(
+		zap.String("id", event.Id),
+		zap.String("type", event.Type),
+		zap.String("source", event.Source),
+	)
+
+	logger.Debug("Validated event message")
+
+	var err error
+
+	switch event.Data.(type) {
+	case *common.Event_UserCreated:
+		err = p.handleUserCreated(event)
+	default:
+		logger.Error("Unknown message type", zap.String("type", event.Type))
+		return nil
+	}
+
+	if err != nil {
+		// TODO: Record error in NR
+		logger.Error("Error processing message", zap.Error(err))
+		return nil
+	}
+
+	return nil
 }

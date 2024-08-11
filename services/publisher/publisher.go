@@ -26,12 +26,17 @@ import (
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/pkg/errors"
 	"github.com/streamdal/rabbit"
+	"github.com/superpowerdotcom/events/codegen/protos/go/user"
 	"go.uber.org/zap"
 
 	"github.com/your_org/go-svc-template/clog"
 )
 
 const (
+	CloudEventsSpecVersion     = "1.0"
+	CloudEventsDataContentType = "application/protobuf"
+	CloudEventsSource          = "go-svc-template"
+
 	DefaultNumWorkers        = 10
 	PublishRequestBufferSize = 1000
 	WorkerShutdownTimeout    = 5 * time.Second
@@ -40,7 +45,18 @@ const (
 type IPublisher interface {
 	Start() error
 	Stop() error
+
+	// Publish is a "raw" method for publishing data to RabbitMQ. It does not
+	// perform any additional encoding on the data and will write it as-is.
+	//
+	// NOTE: This method is not recommended for general use. Instead, use one of
+	// the more specific Publish* methods that will handle event generation and
+	// encoding for you.
 	Publish(ctx context.Context, data []byte, routingKey string) error
+
+	// PublishUserCreatedEvent generates a user.created protobuf event and
+	// publishes it to event bus 'events:user.created'.
+	PublishUserCreatedEvent(ctx context.Context, newUser *user.User) error
 }
 
 type Publisher struct {

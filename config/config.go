@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/alecthomas/kong"
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
@@ -29,8 +31,8 @@ type Config struct {
 	ProcessorRabbitExchangeDeclare   bool     `kong:"help='Whether to declare/create exchange if it does not already exist.',default=true"`
 	ProcessorRabbitExchangeDurable   bool     `kong:"help='Whether exchange should survive a RabbitMQ server restart.',default=true"`
 	ProcessorRabbitExchangeType      string   `kong:"help='RabbitMQ exchange type.',enum='direct,fanout,topic,headers',default=topic"`
-	ProcessorRabbitBindingKeys       []string `kong:"help='Bind the following routing-keys to the queue-name.',default='data-proc'"`
-	ProcessorRabbitQueueName         string   `kong:"help='RabbitMQ queue name.',default='data-proc'"`
+	ProcessorRabbitBindingKeys       []string `kong:"help='Bind the following routing-keys to the queue-name.',default='#'"`
+	ProcessorRabbitQueueName         string   `kong:"help='RabbitMQ queue name.',default=''"`
 	ProcessorRabbitNumConsumers      int      `kong:"help='Number of RabbitMQ consumers.',default=4"`
 	ProcessorRabbitRetryReconnectSec int      `kong:"help='Interval used for re-connecting to Rabbit (when it goes away).',default=10"`
 	ProcessorRabbitAutoAck           bool     `kong:"help='Whether to auto-ACK consumed messages. You probably do not want this.',default=false"`
@@ -51,6 +53,13 @@ type Config struct {
 	PublisherRabbitUseTLS             bool     `kong:"help='RabbitMQ use TLS.',default=false"`
 	PublisherRabbitSkipVerifyTLS      bool     `kong:"help='RabbitMQ skip TLS verification.',default=false"`
 	PublisherNumWorkers               int      `kong:"help='Number of publisher workers to run.',default=10"`
+
+	// Redis used for global state
+	RedisURL         string        `kong:"help='Redis URL.',default=localhost:6379"`
+	RedisPassword    string        `kong:"help='Redis Password.'"`
+	RedisDatabase    int           `kong:"help='Redis database.',default=0"`
+	RedisPoolSize    int           `kong:"help='Redis pool size.',default=10"`
+	RedisDialTimeout time.Duration `kong:"help='Redis dial timeout.',default=5s"`
 
 	KongContext *kong.Context `kong:"-"`
 }

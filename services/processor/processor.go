@@ -15,6 +15,7 @@ import (
 	"github.com/your_org/go-svc-template/backends/cache"
 	"github.com/your_org/go-svc-template/clog"
 	"github.com/your_org/go-svc-template/config"
+	"github.com/your_org/go-svc-template/services/state"
 )
 
 const (
@@ -26,10 +27,12 @@ type IProcessor interface {
 }
 
 type Options struct {
-	RabbitMap map[string]*RabbitConfig
-	Cache     cache.ICache
-	Log       clog.ICustomLog
-	NewRelic  *newrelic.Application
+	RabbitMap    map[string]*RabbitConfig
+	Cache        cache.ICache
+	Log          clog.ICustomLog
+	NewRelic     *newrelic.Application
+	StateService state.IState
+	ShutdownCtx  context.Context
 }
 
 type RabbitConfig struct {
@@ -108,6 +111,14 @@ func (p *Processor) validateOptions(opts *Options) error {
 		}
 
 		opts.RabbitMap[name].funcReal = f
+	}
+
+	if opts.StateService == nil {
+		return errors.New("StateService cannot be nil")
+	}
+
+	if opts.ShutdownCtx == nil {
+		return errors.New("ShutdownCtx cannot be nil")
 	}
 
 	return nil

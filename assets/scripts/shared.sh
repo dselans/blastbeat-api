@@ -85,11 +85,11 @@ fatal() {
 
 prereq() {
     # Do all the required tools exist?
-    REQUIRED_TOOLS=("git" "curl" "docker" "docker-compose" "jq" "kubectl" "aws" "doppler")
+    REQUIRED_TOOLS=("git" "curl" "docker" "jq" "kubectl" "aws" "doppler")
 
     # If this script is running in a Github Workflow, we do not need some of the tools
     if [[ -n "${GITHUB_ACTIONS}" ]]; then
-        REQUIRED_TOOLS=("git" "curl" "docker" "docker-compose" "jq")
+        REQUIRED_TOOLS=("git" "curl" "docker" "jq")
     fi
 
     for tool in "${REQUIRED_TOOLS[@]}"; do

@@ -8,12 +8,18 @@ import (
 	"time"
 
 	"github.com/InVisionApp/go-health"
+	"github.com/bsm/redislock"
 	"github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrzap"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/pkg/errors"
+	"github.com/redis/go-redis/v9"
 	"github.com/streamdal/rabbit"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	ss "github.com/your_org/go-svc-template/services/state"
+
+	sb "github.com/your_org/go-svc-template/backends/state"
 
 	"github.com/your_org/go-svc-template/backends/cache"
 	"github.com/your_org/go-svc-template/clog"
@@ -33,10 +39,14 @@ type Dependencies struct {
 	ProcessorRabbitBackend rabbit.IRabbit
 	PublisherRabbitBackend rabbit.IRabbit
 	CacheBackend           cache.ICache
+	RedisBackend           *redis.Client
+	RedisLockBackend       *redislock.Client
+	StateBackend           sb.IState
 
 	// Services
 	ProcessorService processor.IProcessor
 	PublisherService publisher.IPublisher
+	StateService     ss.IState
 
 	Health health.IHealth
 
@@ -208,6 +218,39 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 
 	d.CacheBackend = cb
 
+	llog.Debug("Setting up redis backend")
+
+	// Redis backend for state
+	client := redis.NewClient(&redis.Options{
+		Addr:        cfg.RedisURL,
+		Password:    cfg.RedisPassword,
+		DB:          cfg.RedisDatabase,
+		PoolSize:    cfg.RedisPoolSize,
+		DialTimeout: cfg.RedisDialTimeout,
+	})
+
+	if err := client.ClientInfo(d.ShutdownCtx).Err(); err != nil {
+		return errors.Wrap(err, "unable to connect to redis")
+	}
+
+	d.RedisBackend = client
+
+	// Create redislock backend
+	d.RedisLockBackend = redislock.New(d.RedisBackend)
+
+	// Create state backend
+	s, err := sb.New(&sb.Options{
+		Prefix:      cfg.ServiceName,
+		Log:         d.Log,
+		RedisClient: d.RedisBackend,
+		RedisLock:   d.RedisLockBackend,
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to setup state service")
+	}
+
+	d.StateBackend = s
+
 	llog.Debug("Setting up rabbit backend")
 
 	// RabbitMQ backend for processing messages
@@ -281,6 +324,23 @@ func (d *Dependencies) setupServices(cfg *config.Config) error {
 	logger := d.Log.With(zap.String("method", "setupServices"))
 	logger.Debug("Setting up services")
 
+	logger.Debug("Setting up state service")
+
+	// Setup state service
+	s, err := ss.New(&ss.Options{
+		Backend:     d.StateBackend,
+		Log:         d.Log,
+		ShutdownCtx: d.ShutdownCtx,
+		Cache:       d.CacheBackend,
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to setup state service")
+	}
+
+	d.StateService = s
+
+	logger.Debug("Setting up processor service")
+
 	// Setup service that will consume and process messages from RabbitMQ
 	procService, err := processor.New(&processor.Options{
 		Cache: d.CacheBackend,
@@ -291,9 +351,11 @@ func (d *Dependencies) setupServices(cfg *config.Config) error {
 				Func:           "ConsumeFunc",
 			},
 		},
-		// TODO: Should instrument graceful shutdown here as well - need shutdown ctx, etc.
-		NewRelic: d.NewRelicApp,
-		Log:      d.Log,
+		// TODO: Instrument graceful shutdown
+		NewRelic:     d.NewRelicApp,
+		Log:          d.Log,
+		ShutdownCtx:  d.ShutdownCtx,
+		StateService: d.StateService,
 	}, cfg)
 	if err != nil {
 		return errors.Wrap(err, "unable to setup proc service")

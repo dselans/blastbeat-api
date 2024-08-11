@@ -19,6 +19,7 @@ AWS_ECR_URL ?= $(AWS_ACCOUNT_ID).dkr.ecr.us-east-1.amazonaws.com
 STG_DEPLOYMENT_MSG = ":large_yellow_circle: *[STG]* Deployment :large_yellow_circle:"
 PRD_DEPLOYMENT_MSG = ":large_green_circle: *[PRD]* Deployment :large_green_circle:"
 SHARED_SCRIPT=./assets/scripts/shared.sh
+FORWARD_SCRIPT=./assets/scripts/forward.sh
 DOPPLER_ENV ?= dev
 
 GO = CGO_ENABLED=$(CGO_ENABLED) GOFLAGS=-mod=vendor go
@@ -48,9 +49,10 @@ help:
 ### Dev
 
 .PHONY: run
-run: description = Run go-svc-template locally
+run: description = Run go-svc-template locally + port-forward deps to localhost (ctrl-c to stop)
 run: prereq
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
+	make util/dev/forward & \
 	$(GO) run `ls -1 *.go | grep -v _test.go`
 
 .PHONY: run/docker
@@ -61,9 +63,11 @@ docker/run:
 
 .PHONY: run/deps
 run/deps: description = Run/start dependencies
+run/deps: prereq check-doppler-secrets util/dev/start
 run/deps:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
-	docker-compose -f ./docker-compose.yml up -d rabbitmq
+	kubectl config use-context minikube && \
+	kubectl apply -f ./deploy.dev.yml
 
 ### Build
 
@@ -184,6 +188,34 @@ util/login-aws-ecr:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
 	aws ecr get-login-password --region us-east-1 | \
 	docker login --username AWS --password-stdin $(AWS_ECR_URL)
+
+.PHONY: util/dev/start
+util/dev/start: description = Start minikube for local dev
+util/dev/start:
+	minikube status || minikube start
+
+.PHONY: util/dev/stop
+util/dev/stop: description = Stop minikube for local dev
+util/dev/stop:
+	minikube status || minikube stop
+
+.PHONY: util/dev/reset
+util/dev/reset: description = Reset minikube for local dev (delete all imgs, pods, etc)
+util/dev/reset:
+	minikube status || minikube delete
+
+.PHONY: util/dev/forward
+util/dev/forward: description = Forward ports to minikube for local dev
+util/dev/forward:
+	@bash $(SHARED_SCRIPT) info "Running $@ ..."
+	@bash $(SHARED_SCRIPT) debug "Forwarding ports to minikube (ctrl-c to stop) ..."
+	@bash $(FORWARD_SCRIPT)
+
+.PHONY: util/k8s/context/dev
+util/k8s/context/dev: description = Set K8S context to local minikube
+util/k8s/context/dev:
+	@bash $(SHARED_SCRIPT) info "Running $@ ..."
+	kubectl config use-context minikube
 
 .PHONY: util/k8s/context/stg
 util/k8s/context/stg: description = Set K8S context to staging cluster

@@ -4,12 +4,15 @@ import (
 	"time"
 
 	gcache "github.com/patrickmn/go-cache"
-	"github.com/sirupsen/logrus"
+)
+
+const (
+	UserPrefix = "user"
 )
 
 type ICache interface {
-	Add(key string, value interface{}) error
-	Set(key string, value interface{})
+	Add(key string, value interface{}, exp ...time.Duration) error
+	Set(key string, value interface{}, exp ...time.Duration)
 	Get(key string) (value interface{}, ok bool)
 	Contains(key string) (exists bool)
 	Remove(key string) bool
@@ -17,23 +20,32 @@ type ICache interface {
 
 type Cache struct {
 	*gcache.Cache
-	log *logrus.Entry
 }
 
 func New() (*Cache, error) {
 	return &Cache{
-		Cache: gcache.New(gcache.NoExpiration, 10*time.Minute),
-		log:   logrus.WithField("pkg", "cache"),
+		Cache: gcache.New(gcache.NoExpiration, time.Minute),
 	}, nil
 }
 
-// Add will error if adding a key that already exists in cache
-func (c *Cache) Add(key string, value interface{}) error {
+// Add will error if adding a key that already exists in cache; accepts an
+// optional expiration time.
+func (c *Cache) Add(key string, value interface{}, exp ...time.Duration) error {
+	if len(exp) > 0 {
+		return c.Cache.Add(key, value, exp[0])
+	}
+
 	return c.Cache.Add(key, value, gcache.NoExpiration)
 }
 
-// Set will add OR overwrite an element in the cache
-func (c *Cache) Set(key string, value interface{}) {
+// Set will add OR overwrite an element in the cache; accepts an optional
+// expiration time.
+func (c *Cache) Set(key string, value interface{}, exp ...time.Duration) {
+	if len(exp) > 0 {
+		c.Cache.Set(key, value, exp[0])
+		return
+	}
+
 	c.Cache.Set(key, value, gcache.NoExpiration)
 }
 

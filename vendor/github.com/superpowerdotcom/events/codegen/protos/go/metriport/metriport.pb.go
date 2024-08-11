@@ -20,16 +20,18 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type PatientRecordRequest struct {
+type PatientCreated struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PatientId string `protobuf:"bytes,1,opt,name=patient_id,json=patientId,proto3" json:"patient_id,omitempty"`
+	Id   string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Dob  string `protobuf:"bytes,3,opt,name=dob,proto3" json:"dob,omitempty"`
 }
 
-func (x *PatientRecordRequest) Reset() {
-	*x = PatientRecordRequest{}
+func (x *PatientCreated) Reset() {
+	*x = PatientCreated{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_metriport_metriport_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -37,13 +39,13 @@ func (x *PatientRecordRequest) Reset() {
 	}
 }
 
-func (x *PatientRecordRequest) String() string {
+func (x *PatientCreated) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PatientRecordRequest) ProtoMessage() {}
+func (*PatientCreated) ProtoMessage() {}
 
-func (x *PatientRecordRequest) ProtoReflect() protoreflect.Message {
+func (x *PatientCreated) ProtoReflect() protoreflect.Message {
 	mi := &file_metriport_metriport_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -55,30 +57,44 @@ func (x *PatientRecordRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PatientRecordRequest.ProtoReflect.Descriptor instead.
-func (*PatientRecordRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use PatientCreated.ProtoReflect.Descriptor instead.
+func (*PatientCreated) Descriptor() ([]byte, []int) {
 	return file_metriport_metriport_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *PatientRecordRequest) GetPatientId() string {
+func (x *PatientCreated) GetId() string {
 	if x != nil {
-		return x.PatientId
+		return x.Id
 	}
 	return ""
 }
 
-type PatientRecordResponse struct {
+func (x *PatientCreated) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PatientCreated) GetDob() string {
+	if x != nil {
+		return x.Dob
+	}
+	return ""
+}
+
+type PatientUpdated struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PatientId   string `protobuf:"bytes,1,opt,name=patient_id,json=patientId,proto3" json:"patient_id,omitempty"`
-	PatientName string `protobuf:"bytes,2,opt,name=patient_name,json=patientName,proto3" json:"patient_name,omitempty"`
-	PatientDob  string `protobuf:"bytes,3,opt,name=patient_dob,json=patientDob,proto3" json:"patient_dob,omitempty"`
+	Id   string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Dob  string `protobuf:"bytes,3,opt,name=dob,proto3" json:"dob,omitempty"`
 }
 
-func (x *PatientRecordResponse) Reset() {
-	*x = PatientRecordResponse{}
+func (x *PatientUpdated) Reset() {
+	*x = PatientUpdated{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_metriport_metriport_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -86,13 +102,13 @@ func (x *PatientRecordResponse) Reset() {
 	}
 }
 
-func (x *PatientRecordResponse) String() string {
+func (x *PatientUpdated) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PatientRecordResponse) ProtoMessage() {}
+func (*PatientUpdated) ProtoMessage() {}
 
-func (x *PatientRecordResponse) ProtoReflect() protoreflect.Message {
+func (x *PatientUpdated) ProtoReflect() protoreflect.Message {
 	mi := &file_metriport_metriport_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -104,30 +120,187 @@ func (x *PatientRecordResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PatientRecordResponse.ProtoReflect.Descriptor instead.
-func (*PatientRecordResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use PatientUpdated.ProtoReflect.Descriptor instead.
+func (*PatientUpdated) Descriptor() ([]byte, []int) {
 	return file_metriport_metriport_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *PatientRecordResponse) GetPatientId() string {
+func (x *PatientUpdated) GetId() string {
 	if x != nil {
-		return x.PatientId
+		return x.Id
 	}
 	return ""
 }
 
-func (x *PatientRecordResponse) GetPatientName() string {
+func (x *PatientUpdated) GetName() string {
 	if x != nil {
-		return x.PatientName
+		return x.Name
 	}
 	return ""
 }
 
-func (x *PatientRecordResponse) GetPatientDob() string {
+func (x *PatientUpdated) GetDob() string {
 	if x != nil {
-		return x.PatientDob
+		return x.Dob
 	}
 	return ""
+}
+
+type PatientDeleted struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (x *PatientDeleted) Reset() {
+	*x = PatientDeleted{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_metriport_metriport_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PatientDeleted) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PatientDeleted) ProtoMessage() {}
+
+func (x *PatientDeleted) ProtoReflect() protoreflect.Message {
+	mi := &file_metriport_metriport_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PatientDeleted.ProtoReflect.Descriptor instead.
+func (*PatientDeleted) Descriptor() ([]byte, []int) {
+	return file_metriport_metriport_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PatientDeleted) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type PatientRecord struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id   string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Dob  string `protobuf:"bytes,3,opt,name=dob,proto3" json:"dob,omitempty"`
+}
+
+func (x *PatientRecord) Reset() {
+	*x = PatientRecord{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_metriport_metriport_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PatientRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PatientRecord) ProtoMessage() {}
+
+func (x *PatientRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_metriport_metriport_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PatientRecord.ProtoReflect.Descriptor instead.
+func (*PatientRecord) Descriptor() ([]byte, []int) {
+	return file_metriport_metriport_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PatientRecord) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *PatientRecord) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PatientRecord) GetDob() string {
+	if x != nil {
+		return x.Dob
+	}
+	return ""
+}
+
+type PatientRecords struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Records []*PatientRecord `protobuf:"bytes,1,rep,name=records,proto3" json:"records,omitempty"`
+}
+
+func (x *PatientRecords) Reset() {
+	*x = PatientRecords{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_metriport_metriport_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PatientRecords) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PatientRecords) ProtoMessage() {}
+
+func (x *PatientRecords) ProtoReflect() protoreflect.Message {
+	mi := &file_metriport_metriport_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PatientRecords.ProtoReflect.Descriptor instead.
+func (*PatientRecords) Descriptor() ([]byte, []int) {
+	return file_metriport_metriport_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *PatientRecords) GetRecords() []*PatientRecord {
+	if x != nil {
+		return x.Records
+	}
+	return nil
 }
 
 var File_metriport_metriport_proto protoreflect.FileDescriptor
@@ -135,23 +308,32 @@ var File_metriport_metriport_proto protoreflect.FileDescriptor
 var file_metriport_metriport_proto_rawDesc = []byte{
 	0x0a, 0x19, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x70, 0x6f, 0x72, 0x74, 0x2f, 0x6d, 0x65, 0x74, 0x72,
 	0x69, 0x70, 0x6f, 0x72, 0x74, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x10, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x73, 0x2e, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x70, 0x6f, 0x72, 0x74, 0x22, 0x35, 0x0a,
-	0x14, 0x50, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x63, 0x6f, 0x72, 0x64, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74,
-	0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x70, 0x61, 0x74, 0x69, 0x65,
-	0x6e, 0x74, 0x49, 0x64, 0x22, 0x7a, 0x0a, 0x15, 0x50, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74, 0x52,
-	0x65, 0x63, 0x6f, 0x72, 0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1d, 0x0a,
-	0x0a, 0x70, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x09, 0x70, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x64, 0x12, 0x21, 0x0a, 0x0c,
-	0x70, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x0b, 0x70, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x12,
-	0x1f, 0x0a, 0x0b, 0x70, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74, 0x5f, 0x64, 0x6f, 0x62, 0x18, 0x03,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x70, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74, 0x44, 0x6f, 0x62,
-	0x42, 0x40, 0x5a, 0x3e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x73,
-	0x75, 0x70, 0x65, 0x72, 0x70, 0x6f, 0x77, 0x65, 0x72, 0x64, 0x6f, 0x74, 0x63, 0x6f, 0x6d, 0x2f,
-	0x65, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x2f, 0x63, 0x6f, 0x64, 0x65, 0x67, 0x65, 0x6e, 0x2f, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x73, 0x2f, 0x67, 0x6f, 0x2f, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x70, 0x6f,
-	0x72, 0x74, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x74, 0x6f, 0x73, 0x2e, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x70, 0x6f, 0x72, 0x74, 0x22, 0x46, 0x0a,
+	0x0e, 0x50, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x12,
+	0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12,
+	0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e,
+	0x61, 0x6d, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x64, 0x6f, 0x62, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x03, 0x64, 0x6f, 0x62, 0x22, 0x46, 0x0a, 0x0e, 0x50, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74,
+	0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x64,
+	0x6f, 0x62, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x64, 0x6f, 0x62, 0x22, 0x20, 0x0a,
+	0x0e, 0x50, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x12,
+	0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x22,
+	0x45, 0x0a, 0x0d, 0x50, 0x61, 0x74, 0x69, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x63, 0x6f, 0x72, 0x64,
+	0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64,
+	0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04,
+	0x6e, 0x61, 0x6d, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x64, 0x6f, 0x62, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x03, 0x64, 0x6f, 0x62, 0x22, 0x4b, 0x0a, 0x0e, 0x50, 0x61, 0x74, 0x69, 0x65, 0x6e,
+	0x74, 0x52, 0x65, 0x63, 0x6f, 0x72, 0x64, 0x73, 0x12, 0x39, 0x0a, 0x07, 0x72, 0x65, 0x63, 0x6f,
+	0x72, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1f, 0x2e, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x73, 0x2e, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x70, 0x6f, 0x72, 0x74, 0x2e, 0x50, 0x61, 0x74,
+	0x69, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x63, 0x6f, 0x72, 0x64, 0x52, 0x07, 0x72, 0x65, 0x63, 0x6f,
+	0x72, 0x64, 0x73, 0x42, 0x40, 0x5a, 0x3e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
+	0x6d, 0x2f, 0x73, 0x75, 0x70, 0x65, 0x72, 0x70, 0x6f, 0x77, 0x65, 0x72, 0x64, 0x6f, 0x74, 0x63,
+	0x6f, 0x6d, 0x2f, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x2f, 0x63, 0x6f, 0x64, 0x65, 0x67, 0x65,
+	0x6e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x2f, 0x67, 0x6f, 0x2f, 0x6d, 0x65, 0x74, 0x72,
+	0x69, 0x70, 0x6f, 0x72, 0x74, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -166,17 +348,21 @@ func file_metriport_metriport_proto_rawDescGZIP() []byte {
 	return file_metriport_metriport_proto_rawDescData
 }
 
-var file_metriport_metriport_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_metriport_metriport_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_metriport_metriport_proto_goTypes = []interface{}{
-	(*PatientRecordRequest)(nil),  // 0: protos.metriport.PatientRecordRequest
-	(*PatientRecordResponse)(nil), // 1: protos.metriport.PatientRecordResponse
+	(*PatientCreated)(nil), // 0: protos.metriport.PatientCreated
+	(*PatientUpdated)(nil), // 1: protos.metriport.PatientUpdated
+	(*PatientDeleted)(nil), // 2: protos.metriport.PatientDeleted
+	(*PatientRecord)(nil),  // 3: protos.metriport.PatientRecord
+	(*PatientRecords)(nil), // 4: protos.metriport.PatientRecords
 }
 var file_metriport_metriport_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	3, // 0: protos.metriport.PatientRecords.records:type_name -> protos.metriport.PatientRecord
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_metriport_metriport_proto_init() }
@@ -186,7 +372,7 @@ func file_metriport_metriport_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_metriport_metriport_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PatientRecordRequest); i {
+			switch v := v.(*PatientCreated); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -198,7 +384,43 @@ func file_metriport_metriport_proto_init() {
 			}
 		}
 		file_metriport_metriport_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PatientRecordResponse); i {
+			switch v := v.(*PatientUpdated); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_metriport_metriport_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PatientDeleted); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_metriport_metriport_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PatientRecord); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_metriport_metriport_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PatientRecords); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -216,7 +438,7 @@ func file_metriport_metriport_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_metriport_metriport_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
