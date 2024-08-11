@@ -1,11 +1,21 @@
 go-svc-template
 ===============
 
+[![go-svc-template - Release](https://github.com/superpowerdotcom/go-svc-template/actions/workflows/release.yml/badge.svg)](https://github.com/superpowerdotcom/go-svc-template/actions/workflows/release.yml)
+
 ⚡ Batteries-included Golang microservice template ⚡️
 
 _Last updated: 07/25/2024_
 
 ## Changelog
+
+* **08/11/2024**
+    * Sync'd latest changes from [go-hie](https://github.com/superpowerdotcom/go-hie)
+    * Template now has state
+    * Events updated to `v0.0.14` (which includes Google's FHIR protos)
+    * Updated defaults to rabbit consumer
+    * Lots of event-related examples
+    * Cache-usage examples
 
 * **07/25/2024**
      * Updated `Makefile` (and helpers) to match latest changes in [superpower repo](https://github.com/superpowerdotcom/superpower)
@@ -94,6 +104,14 @@ is triggered.
 
 When a PR is merged, a [Release workflow](.github/workflows/release.yml)
 is triggered. This workflow will build a docker image and push it to AWS ECR.
+
+
+> [!WARNING]
+> Release action (`make build/docker`) will build for both `arm64` and `amd64`.
+>
+> Since Github (by default) uses `amd64` for its runners - building for `arm64`
+> will be slow. Update `Makefile` and remove `arm64` platform if you don't need
+> both.
 
 ## Deployment
 
