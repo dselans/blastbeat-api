@@ -15,8 +15,8 @@ package api
 //	"go.uber.org/zap"
 //	"google.golang.org/protobuf/encoding/protojson"
 //
-//	sb "github.com/superpowerdotcom/go-hie/backends/state"
-//	"github.com/superpowerdotcom/go-hie/validate"
+//	sb "github.com/superpowerdotcom/go-svc-template/backends/state"
+//	"github.com/superpowerdotcom/go-svc-template/validate"
 //)
 //
 //type NewUserRequest struct {
