@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/superpowerdotcom/events/codegen/protos/go/common"
+	"github.com/superpowerdotcom/events/build/proto/go/common"
 	"go.uber.org/zap"
 
 	"github.com/your_org/go-svc-template/backends/cache"

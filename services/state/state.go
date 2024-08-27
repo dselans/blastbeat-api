@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/superpowerdotcom/events/codegen/protos/go/user"
+	"github.com/superpowerdotcom/events/build/proto/go/user"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 

@@ -2,4 +2,5 @@
 .idea
 backend-data/*
 c.out
-build
+./build
+go-svc-template

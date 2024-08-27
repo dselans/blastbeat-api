@@ -26,7 +26,7 @@ import (
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/pkg/errors"
 	"github.com/streamdal/rabbit"
-	"github.com/superpowerdotcom/events/codegen/protos/go/user"
+	"github.com/superpowerdotcom/events/build/proto/go/user"
 	"go.uber.org/zap"
 
 	"github.com/your_org/go-svc-template/clog"
