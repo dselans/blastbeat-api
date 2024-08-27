@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/superpowerdotcom/events/codegen/protos/go/common"
-	"github.com/superpowerdotcom/events/codegen/protos/go/user"
+	"github.com/superpowerdotcom/events/build/proto/go/common"
+	"github.com/superpowerdotcom/events/build/proto/go/user"
 	"google.golang.org/protobuf/proto"
 )
 

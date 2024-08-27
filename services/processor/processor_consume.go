@@ -2,7 +2,7 @@ package processor
 
 import (
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/superpowerdotcom/events/codegen/protos/go/common"
+	"github.com/superpowerdotcom/events/build/proto/go/common"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 

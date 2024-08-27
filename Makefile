@@ -52,7 +52,6 @@ help:
 run: description = Run go-svc-template locally + port-forward deps to localhost (ctrl-c to stop)
 run: prereq
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
-	make util/dev/forward & \
 	$(GO) run `ls -1 *.go | grep -v _test.go`
 
 .PHONY: run/docker
@@ -68,6 +67,21 @@ run/deps:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
 	kubectl config use-context minikube && \
 	kubectl apply -f ./deploy.dev.yml
+
+.PHONY: run/deps
+run/deps: description = Run/start dependencies
+run/deps: prereq check-doppler-secrets util/dev/start
+run/deps:
+	@bash $(SHARED_SCRIPT) info "Running $@ ..."
+	kubectl config use-context minikube && \
+	kubectl apply -f ./deploy.dev.yml
+
+.PHONY: run/deps/forward
+run/deps/forward: description = Forward ports for dependencies
+run/deps/forward: prereq
+	@bash $(SHARED_SCRIPT) info "Running $@ ..."
+	@bash $(SHARED_SCRIPT) debug "Forwarding ports to minikube (ctrl-c to stop) ..."
+	@bash $(FORWARD_SCRIPT) all
 
 ### Build
 

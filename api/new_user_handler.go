@@ -11,7 +11,7 @@ package api
 //
 //	"github.com/pkg/errors"
 //	r3labs "github.com/r3labs/diff/v3"
-//	"github.com/superpowerdotcom/events/codegen/protos/go/user"
+//	"github.com/superpowerdotcom/events/build/proto/go/user"
 //	"go.uber.org/zap"
 //	"google.golang.org/protobuf/encoding/protojson"
 //

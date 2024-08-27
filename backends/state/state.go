@@ -12,7 +12,7 @@ import (
 	"github.com/bsm/redislock"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
-	"github.com/superpowerdotcom/events/codegen/protos/go/common"
+	"github.com/superpowerdotcom/events/build/proto/go/common"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
