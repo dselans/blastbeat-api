@@ -4,7 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/InVisionApp/go-health"
@@ -92,6 +95,11 @@ func New(cfg *config.Config) (*Dependencies, error) {
 
 	if err := d.setupLogging(); err != nil {
 		return nil, errors.Wrap(err, "unable to setup logging")
+	}
+
+	// Pretty print config in dev mode
+	if d.Config.LogConfig == "dev" {
+		d.LogConfig()
 	}
 
 	if err := d.setupHealth(); err != nil {
@@ -409,4 +417,35 @@ func (c *customCheck) Status() (interface{}, error) {
 	// You can return additional information pertaining to the check as long
 	// as it can be JSON marshalled
 	return map[string]int{}, nil
+}
+
+// LogConfig pretty prints the config to the log
+func (d *Dependencies) LogConfig() {
+	d.ZapLog.Info("Config")
+
+	longestKey := 0
+
+	for k, _ := range d.Config.GetMap() {
+		if len(k) > longestKey {
+			longestKey = len(k)
+		}
+	}
+
+	maxPadding := longestKey + 3
+	totalKeys := len(d.Config.GetMap())
+	index := 0
+	prefix := "├─"
+
+	for k, v := range d.Config.GetMap() {
+		index++
+
+		if index == totalKeys {
+			prefix = "└─"
+		}
+
+		padding := maxPadding - len(k)
+
+		line := fmt.Sprintf("%s %s %s %-"+strconv.Itoa(len(k))+"v", prefix, k, strings.Repeat(" ", padding), v)
+		d.ZapLog.Debug(line)
+	}
 }
