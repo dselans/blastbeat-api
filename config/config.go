@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -95,4 +97,24 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// GetMap generates a map of field:value pairs for all fields in Config struct
+func (c *Config) GetMap() map[string]string {
+	fields := make(map[string]string)
+
+	val := reflect.ValueOf(c)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	t := val.Type()
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		value := val.Field(i)
+		fields[field.Name] = fmt.Sprintf("%v", value)
+	}
+
+	return fields
 }
