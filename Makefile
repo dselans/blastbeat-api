@@ -20,7 +20,10 @@ STG_DEPLOYMENT_MSG = ":large_yellow_circle: *[STG]* Deployment :large_yellow_cir
 PRD_DEPLOYMENT_MSG = ":large_green_circle: *[PRD]* Deployment :large_green_circle:"
 SHARED_SCRIPT=./assets/scripts/shared.sh
 FORWARD_SCRIPT=./assets/scripts/forward.sh
+PROTOSET_SCRIPT=./assets/scripts/sync-protoset.sh
 DOPPLER_ENV ?= dev
+PLUMBER_QUEUE_NAME ?= plumber-$(shell date | sha256sum | cut -b 1-6)
+PLUMBER_RABBITMQ_URL ?= amqp://localhost
 
 GO = CGO_ENABLED=$(CGO_ENABLED) GOFLAGS=-mod=vendor go
 CGO_ENABLED ?= 0
@@ -242,6 +245,42 @@ util/k8s/context/prd: description = Set K8S context to production cluster
 util/k8s/context/prd:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
 	aws eks update-kubeconfig --name production-cluster --region $(AWS_REGION)
+
+### Events
+
+.PHONY: events/read
+events/read: description = Continuously read events from bus in minikube
+events/read: events/protoset
+	@bash $(SHARED_SCRIPT) debug "Continuously reading events from bus ..."
+	plumber read rabbit -f --pretty \
+    --protobuf-descriptor-set ./assets/events/events.protoset \
+    --protobuf-root-message common.Event \
+    --address $(PLUMBER_RABBITMQ_URL) \
+    --exchange-name events \
+    --queue-name $(PLUMBER_QUEUE_NAME) \
+    --queue-declare \
+    --queue-delete \
+    --binding-key \# \
+    --decode-type protobuf
+
+.PHONY: events/write/user-updated
+events/write/user-updated: description = Emit user-updated event on bus in minikube
+events/write/user-updated: events/protoset
+	@bash $(SHARED_SCRIPT) debug "Writing user-updated event to bus ..."
+	plumber write rabbit \
+    --protobuf-descriptor-set ./assets/events/events.protoset \
+    --protobuf-root-message common.Event \
+    --address $(PLUMBER_RABBITMQ_URL) \
+    --exchange-name events \
+    --routing-key user.updated \
+    --encode-type jsonpb \
+    --input-file ./assets/events/user-updated.json
+
+.PHONY: events/protoset
+events/protoset: description = Sync events.protoset with events version specified in go.mod
+events/protoset: prereq
+	@bash $(SHARED_SCRIPT) debug "Syncing events.protoset with events version specified in go.mod ..."
+	@doppler run -p shared -c prd --only-secrets GITHUB_TOKEN -- sh $(PROTOSET_SCRIPT)
 
 # ------------------- non-public targets --------------------
 
