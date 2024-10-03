@@ -93,15 +93,19 @@ spec:
         - name: GO_SVC_TEMPLATE_NEW_RELIC_APP_NAME
           value: "go-svc-template (PRD)"
 
+        ############### Redis Configuration ###############
+
+        - name: GO_SVC_TEMPLATE_REDIS_URL
+          value: "{{ .GO_SVC_TEMPLATE_REDIS_URL }}"
+
+        - name: GO_HIE_REDIS_PASSWORD
+          value: "{{ .GO_SVC_TEMPLATE_REDIS_PASSWORD }}"
+
+        ################ RabbitMQ Consumer / Processor Config #################
+
         # RabbitMQ URL (expects full DSN)
         - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_URL
           value: "{{ .GO_SVC_TEMPLATE_PROCESSOR_RABBIT_URL }}"
-
-        # Routing key used for publishing messages.
-        #
-        # NOTE: Only applicable when 'rabbit' lib is in 'publisher' or 'both' mode.
-        - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_ROUTING_KEY
-          value: "routing-key-used-by-publisher"
 
         # Name of the exchange queue will be bound to.
         #
@@ -135,7 +139,7 @@ spec:
         #
         # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
         - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_BINDING_KEYS
-          value: "routing-key-to-bind-to"
+          value: "#"
 
         # When left empty, rabbitmq will generate a random queue name. This
         # effectively means that all consumers will receive a COPY of the
