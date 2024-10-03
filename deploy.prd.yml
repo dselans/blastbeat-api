@@ -184,7 +184,7 @@ spec:
         ################ RabbitMQ Producer / Publisher Config #################
 
         - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_URL
-          value: {{ .GO_SVC_TEMPLATE_PUBLISHER_RABBIT_URL }}
+          value: "{{ .GO_SVC_TEMPLATE_PUBLISHER_RABBIT_URL }}"
 
         - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_EXCHANGE_NAME
           value: "events"

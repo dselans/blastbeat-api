@@ -34,7 +34,7 @@ type Config struct {
 	ProcessorRabbitExchangeDurable   bool     `kong:"help='Whether exchange should survive a RabbitMQ server restart.',default=true"`
 	ProcessorRabbitExchangeType      string   `kong:"help='RabbitMQ exchange type.',enum='direct,fanout,topic,headers',default=topic"`
 	ProcessorRabbitBindingKeys       []string `kong:"help='Bind the following routing-keys to the queue-name.',default='#'"`
-	ProcessorRabbitQueueName         string   `kong:"help='RabbitMQ queue name.',default=''"`
+	ProcessorRabbitQueueName         string   `kong:"help='RabbitMQ queue name.',default='go-svc-template'"`
 	ProcessorRabbitNumConsumers      int      `kong:"help='Number of RabbitMQ consumers.',default=4"`
 	ProcessorRabbitRetryReconnectSec int      `kong:"help='Interval used for re-connecting to Rabbit (when it goes away).',default=10"`
 	ProcessorRabbitAutoAck           bool     `kong:"help='Whether to auto-ACK consumed messages. You probably do not want this.',default=false"`
