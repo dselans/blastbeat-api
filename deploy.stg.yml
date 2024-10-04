@@ -98,7 +98,7 @@ spec:
         - name: GO_SVC_TEMPLATE_REDIS_URL
           value: "{{ .GO_SVC_TEMPLATE_REDIS_URL }}"
 
-        - name: GO_HIE_REDIS_PASSWORD
+        - name: GO_SVC_TEMPLATE_REDIS_PASSWORD
           value: "{{ .GO_SVC_TEMPLATE_REDIS_PASSWORD }}"
 
         ################ RabbitMQ Consumer / Processor Config #################
