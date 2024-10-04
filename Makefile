@@ -24,6 +24,7 @@ PROTOSET_SCRIPT=./assets/scripts/sync-protoset.sh
 DEPLOY_SCRIPT=./assets/scripts/deploy.py
 KSP_SCRIPT=./assets/scripts/ksp.sh
 DOPPLER_CONFIG ?= dev
+DEPLOY_CONFIG ?= deploy.dev.yml
 PLUMBER_QUEUE_NAME ?= plumber-$(shell date | sha256sum | cut -b 1-6)
 PLUMBER_RABBITMQ_URL ?= amqp://localhost
 
@@ -307,11 +308,6 @@ deploy/hidden: prereq check-doppler-secrets
 	@bash $(SHARED_SCRIPT) info "Performing K8S deployment to $(DEPLOY_ENV)..."
 	aws eks update-kubeconfig --name $(K8S_CLUSTER) --region $(AWS_REGION) || (echo "Failed to update kubeconfig" && exit 1)
 	@bash $(SHARED_SCRIPT) info "Previous image: $(shell bash $(KSP_SCRIPT) image $(KSP_SERVICE))"
-ifeq ($(DEPLOY_ENV),STG)
-	@TARGET="deploy/stg" bash $(SHARED_SCRIPT) notify $(STG_DEPLOYMENT_MSG)
-else ifeq ($(DEPLOY_ENV),PRD)
-	@TARGET="deploy/prd" bash $(SHARED_SCRIPT) notify $(PRD_DEPLOYMENT_MSG)
-endif
 	doppler secrets substitute -p $(DOPPLER_PROJECT) -c $(DOPPLER_CONFIG) $(DEPLOY_CONFIG) | \
 	sed "s/__VERSION__/$(VERSION)/g" | \
 	sed "s/__SERVICE__/$(SERVICE)/g" | \
