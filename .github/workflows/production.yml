@@ -12,7 +12,7 @@
 on:
   workflow_dispatch:
 
-name: Production
+name: go-svc-template Production
 
 jobs:
   build:
