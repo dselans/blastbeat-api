@@ -1,13 +1,21 @@
-name: go-svc-template - Release
+# This action is intended for cutting a production release!
+#
+# This workflow will:
+#
+# 1. Build server
+# 2. Run tests
+# 3. Build and push Docker image tagged with "${shortCommitSHA}-prd" to AWS ECR
+#
+# Once the image is pushed, it will show up when running `make deploy/*/prd`.
+#
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+
+name: Production
 
 jobs:
   build:
-    if: ${{ !contains(github.event.head_commit.message, 'norelease') }}
     runs-on: arm-2cpu-8gbmem-75gbssd
     steps:
       - uses: actions/checkout@main
@@ -35,8 +43,11 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Display github short sha
+        run: VERSION=${GITHUB_SHORT_SHA}-prd echo $VERSION
+
       - name: Build & push docker app image
-        run: make build/docker
+        run: VERSION=${GITHUB_SHORT_SHA}-prd make build/docker
 
       # This will create or bump an existing semver tag
       - name: Create tag

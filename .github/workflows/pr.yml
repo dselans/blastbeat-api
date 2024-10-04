@@ -5,7 +5,7 @@ on: pull_request
 jobs:
   test:
     name: Run tests
-    runs-on: ubuntu-latest
+    runs-on: arm-2cpu-8gbmem-75gbssd
     steps:
     - name: Set up Go
       uses: actions/setup-go@v2.1.3

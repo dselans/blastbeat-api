@@ -21,7 +21,9 @@ PRD_DEPLOYMENT_MSG = ":large_green_circle: *[PRD]* Deployment :large_green_circl
 SHARED_SCRIPT=./assets/scripts/shared.sh
 FORWARD_SCRIPT=./assets/scripts/forward.sh
 PROTOSET_SCRIPT=./assets/scripts/sync-protoset.sh
-DOPPLER_ENV ?= dev
+DEPLOY_SCRIPT=./assets/scripts/deploy.py
+KSP_SCRIPT=./assets/scripts/ksp.sh
+DOPPLER_CONFIG ?= dev
 PLUMBER_QUEUE_NAME ?= plumber-$(shell date | sha256sum | cut -b 1-6)
 PLUMBER_RABBITMQ_URL ?= amqp://localhost
 
@@ -62,14 +64,6 @@ docker/run: description = Build and run container + deps via docker-compose
 docker/run:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
 	docker-compose up -d
-
-.PHONY: run/deps
-run/deps: description = Run/start dependencies
-run/deps: prereq check-doppler-secrets util/dev/start
-run/deps:
-	@bash $(SHARED_SCRIPT) info "Running $@ ..."
-	kubectl config use-context minikube && \
-	kubectl apply -f ./deploy.dev.yml
 
 .PHONY: run/deps
 run/deps: description = Run/start dependencies
@@ -125,40 +119,33 @@ build/docker:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
 	AWS_ECR_URL=$(AWS_ECR_URL) \
 	VERSION=$(VERSION) \
-	docker buildx build --push --platform=linux/arm64,linux/amd64 --build-arg VERSION=$(VERSION) \
+	docker buildx build --push --platform=linux/arm64 --build-arg VERSION=$(VERSION) \
     -t $(AWS_ECR_URL)/$(SERVICE):$(VERSION) \
-	-t $(AWS_ECR_URL)/$(SERVICE):latest \
 	-f ./Dockerfile .
 
 ### Deploy
 
 .PHONY: deploy/stg
-deploy/stg: description = Deploy go-svc-template image to K8S
-deploy/stg: DOPPLER_ENV=stg
-deploy/stg: prereq check-doppler-secrets
-	@bash $(SHARED_SCRIPT) info "Creating deployment notification in Slack ..."
-	@TARGET=$@ bash $(SHARED_SCRIPT) notify $(STG_DEPLOYMENT_MSG)
-	@bash $(SHARED_SCRIPT) info "Performing K8S deployment ..."
-	aws eks update-kubeconfig --name staging-cluster --region $(AWS_REGION) && \
-	doppler secrets substitute -p $(SERVICE) -c $(DOPPLER_ENV) deploy.$(DOPPLER_ENV).yml |  \
-	sed "s/__VERSION__/$(VERSION)/g" | \
-	sed "s/__SERVICE__/$(SERVICE)/g" | \
-	sed "s/__AWS_ECR_URL__/$(AWS_ECR_URL)/g" | \
-	kubectl apply -f -
+deploy/stg: description = Deploy go-svc-template to staging (STG)
+deploy/stg: prereq
+	K8S_CLUSTER=staging-cluster \
+	DOPPLER_PROJECT=go-svc-template \
+	DOPPLER_CONFIG=stg \
+	DEPLOY_ENV=STG \
+	DEPLOY_CONFIG=deploy.stg.yml \
+	KSP_SERVICE=go-svc-template \
+	python3 $(DEPLOY_SCRIPT) -r go-svc-template -t deploy/hidden
 
 .PHONY: deploy/prd
-deploy/prd: description = Deploy go-svc-template image to K8S
-deploy/prd: DOPPLER_ENV=prd
+deploy/prd: description = Deploy go-svc-template to production (PRD)
 deploy/prd: prereq check-doppler-secrets
-	@bash $(SHARED_SCRIPT) info "Creating deployment notification in Slack ..."
-	@TARGET=$@ bash $(SHARED_SCRIPT) notify $(PRD_DEPLOYMENT_MSG)
-	@bash $(SHARED_SCRIPT) info "Performing K8S deployment ..."
-	aws eks update-kubeconfig --name production-cluster --region $(AWS_REGION) && \
-	doppler secrets substitute -p $(SERVICE) -c $(DOPPLER_ENV) deploy.$(DOPPLER_ENV).yml | \
-	sed "s/__VERSION__/$(VERSION)/g" | \
-	sed "s/__SERVICE__/$(SERVICE)/g" | \
-	sed "s/__AWS_ECR_URL__/$(AWS_ECR_URL)/g" | \
-	kubectl apply -f -
+	K8S_CLUSTER=production-cluster \
+	DOPPLER_PROJECT=go-svc-template \
+	DOPPLER_CONFIG=prd \
+	DEPLOY_ENV=PRD \
+	DEPLOY_CONFIG=deploy.prd.yml \
+	KSP_SERVICE=go-svc-template \
+	python3 $(DEPLOY_SCRIPT) -r go-svc-template -t deploy/hidden -f prd
 
 ### Test
 
@@ -295,9 +282,9 @@ check-doppler-token:
 # Check if any secrets are missing (ie. have 'no-value') in Doppler (default DOPPLER_ENV to 'dev')
 .PHONY: check-doppler-secrets
 check-doppler-secrets:
-	@bash $(SHARED_SCRIPT) info "Checking for missing secrets ..."
-	@if doppler secrets substitute -p $(SERVICE) -c $(DOPPLER_ENV) ./deploy.$(DOPPLER_ENV).yml | grep -B 1 "<no value>"; then \
-		bash $(SHARED_SCRIPT) fatal "Found missing secret(s) in './deploy.$(DOPPLER_ENV).yml'"; \
+	@bash $(SHARED_SCRIPT) info "Checking for missing secrets in $(DEPLOY_CONFIG) ..."
+	@if doppler secrets substitute -p $(SERVICE) -c $(DOPPLER_CONFIG) $(DEPLOY_CONFIG) | grep -B 1 "<no value>"; then \
+		bash $(SHARED_SCRIPT) fatal "Found missing secret(s) in '$(DEPLOY_CONFIG)'"; \
 	fi
 
 .PHONY: prereq
@@ -313,3 +300,15 @@ debug/slack:
 .PHONY: debug/log
 debug/log:
 	@bash $(SHARED_SCRIPT) info "Installing tools ..."
+
+.PHONY: deploy/hidden
+deploy/hidden: prereq check-doppler-secrets
+	$(call check_defined, K8S_CLUSTER DOPPLER_PROJECT DOPPLER_CONFIG DEPLOY_CONFIG DEPLOY_ENV, Variable is not set)
+	@bash $(SHARED_SCRIPT) info "Performing K8S deployment to $(DEPLOY_ENV)..."
+	aws eks update-kubeconfig --name $(K8S_CLUSTER) --region $(AWS_REGION) || (echo "Failed to update kubeconfig" && exit 1)
+	@bash $(SHARED_SCRIPT) info "Previous image: $(shell bash $(KSP_SCRIPT) image $(KSP_SERVICE))"
+	doppler secrets substitute -p $(DOPPLER_PROJECT) -c $(DOPPLER_CONFIG) $(DEPLOY_CONFIG) | \
+	sed "s/__VERSION__/$(VERSION)/g" | \
+	sed "s/__SERVICE__/$(SERVICE)/g" | \
+	sed "s/__AWS_ECR_URL__/$(AWS_ECR_URL)/g" | \
+	kubectl apply -f -
