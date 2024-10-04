@@ -9,6 +9,9 @@ _Last updated: 07/25/2024_
 
 ## Changelog
 
+* **10/04/2024**
+    * Sync'd latest changes from `go-kustomer-events`
+
 * **08/11/2024**
     * Sync'd latest changes from [go-hie](https://github.com/superpowerdotcom/go-hie)
     * Template now has state
