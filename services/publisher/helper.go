@@ -23,7 +23,7 @@ func (p *Publisher) PublishUserCreatedEvent(ctx context.Context, u *user.User) e
 	userCreatedEvent := &common.Event{
 		Id:              uuid.New().String(),
 		Source:          CloudEventsSource,
-		Type:            "user.created",
+		Type:            "user.Created",
 		SpecVersion:     CloudEventsSpecVersion,
 		Datacontenttype: CloudEventsDataContentType,
 		Subject:         u.Id,
@@ -37,11 +37,11 @@ func (p *Publisher) PublishUserCreatedEvent(ctx context.Context, u *user.User) e
 
 	data, err := proto.Marshal(userCreatedEvent)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal user.created event")
+		return errors.Wrap(err, "failed to marshal user.reated event")
 	}
 
-	if err := p.Publish(ctx, data, "user.created"); err != nil {
-		return errors.Wrap(err, "failed to publish user.created event")
+	if err := p.Publish(ctx, data, "user.Created"); err != nil {
+		return errors.Wrap(err, "failed to publish user.Created event")
 	}
 
 	return nil

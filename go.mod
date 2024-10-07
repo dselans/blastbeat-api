@@ -20,7 +20,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/streamdal/rabbit v0.1.21
-	github.com/superpowerdotcom/events v0.0.66
+	github.com/superpowerdotcom/events v0.0.71
 	go.uber.org/zap v1.27.0
 	google.golang.org/protobuf v1.34.2
 )

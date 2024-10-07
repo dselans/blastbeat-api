@@ -501,6 +501,8 @@ github.com/superpowerdotcom/events v0.0.35 h1:JhgPVDiLEMa4zexb2M1yiicQULwOKAcbar
 github.com/superpowerdotcom/events v0.0.35/go.mod h1:9q/1e6tIfbltUvrMpPyurx/TxTOgQNNo5vQm8SyesoU=
 github.com/superpowerdotcom/events v0.0.66 h1:AubkRqjMds++KD73QOacs37nB8wHIbO0tIRyDkzEmqs=
 github.com/superpowerdotcom/events v0.0.66/go.mod h1:9q/1e6tIfbltUvrMpPyurx/TxTOgQNNo5vQm8SyesoU=
+github.com/superpowerdotcom/events v0.0.71 h1:JGsKIFybhytoiFt/V6HLL03L4lTaD/kX/cGZsyAjz9A=
+github.com/superpowerdotcom/events v0.0.71/go.mod h1:9q/1e6tIfbltUvrMpPyurx/TxTOgQNNo5vQm8SyesoU=
 github.com/tchap/go-patricia v0.0.0-20160729071656-dd168db6051b/go.mod h1:bmLyhP68RS6kStMGxByiQ23RP/odRBOTVjwp2cDyi6I=
 github.com/tebeka/selenium v0.9.9/go.mod h1:5Fr8+pUvU6B1OiPfkdCKdXZyr5znvVkxuPd0NOdZCQc=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
