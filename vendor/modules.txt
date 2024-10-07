@@ -146,14 +146,16 @@ github.com/sirupsen/logrus
 github.com/streamdal/rabbit
 # github.com/stretchr/testify v1.8.4
 ## explicit; go 1.20
-# github.com/superpowerdotcom/events v0.0.66
+# github.com/superpowerdotcom/events v0.0.71
 ## explicit; go 1.20
+github.com/superpowerdotcom/events/build/proto/go/action_plan
 github.com/superpowerdotcom/events/build/proto/go/affiliate
 github.com/superpowerdotcom/events/build/proto/go/command
 github.com/superpowerdotcom/events/build/proto/go/common
 github.com/superpowerdotcom/events/build/proto/go/medplum
 github.com/superpowerdotcom/events/build/proto/go/merch
 github.com/superpowerdotcom/events/build/proto/go/metriport
+github.com/superpowerdotcom/events/build/proto/go/service_request
 github.com/superpowerdotcom/events/build/proto/go/user
 github.com/superpowerdotcom/events/build/proto/go/wearable
 # go.uber.org/multierr v1.11.0

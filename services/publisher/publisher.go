@@ -54,8 +54,8 @@ type IPublisher interface {
 	// encoding for you.
 	Publish(ctx context.Context, data []byte, routingKey string) error
 
-	// PublishUserCreatedEvent generates a user.created protobuf event and
-	// publishes it to event bus 'events:user.created'.
+	// PublishUserCreatedEvent generates a user.Created protobuf event and
+	// publishes it to event bus 'events:user.Created'.
 	PublishUserCreatedEvent(ctx context.Context, newUser *user.User) error
 }
 

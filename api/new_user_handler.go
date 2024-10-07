@@ -61,7 +61,7 @@ package api
 //	existingUserEntry, err := a.deps.StateService.GetUser(r.Context(), newUser.Id)
 //	if err != nil {
 //		if errors.Is(err, sb.ErrDoesNotExist) {
-//			a.log.Debug("user not found - emitting user.created event", zap.String("email", newUser.Email))
+//			a.log.Debug("user not found - emitting user.Created event", zap.String("email", newUser.Email))
 //
 //			if err := a.deps.PublisherService.PublishUserCreatedEvent(r.Context(), newUser); err != nil {
 //				a.log.Error("failed to publish new user event", zap.Error(err))
@@ -76,7 +76,7 @@ package api
 //
 //			WriteJSON(rw, ResponseJSON{
 //				Status:  http.StatusOK,
-//				Message: "user not found - emitted user.created event",
+//				Message: "user not found - emitted user.Created event",
 //			}, http.StatusOK)
 //
 //			return
