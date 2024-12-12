@@ -5,11 +5,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/superpowerdotcom/events/build/proto/go/common"
+	"github.com/superpowerdotcom/go-lib-common/validate"
 	"go.uber.org/zap"
 
 	"github.com/your_org/go-svc-template/backends/cache"
 	"github.com/your_org/go-svc-template/backends/state"
-	"github.com/your_org/go-svc-template/validate"
 )
 
 func (p *Processor) handleUserCreated(event *common.Event) error {

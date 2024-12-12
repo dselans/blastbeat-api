@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"runtime"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -43,7 +44,8 @@ type txn struct {
 
 	// csecData is used to propagate HTTP request context in async apps,
 	// when NewGoroutine is called.
-	csecData any
+	csecData       any
+	csecAttributes map[string]any
 }
 
 type thread struct {
@@ -444,11 +446,16 @@ func (thd *thread) End(recovered interface{}) error {
 
 	txn.finished = true
 
-	if nil != recovered {
-		e := txnErrorFromPanic(time.Now(), recovered)
-		e.Stack = getStackTrace()
-		thd.noticeErrorInternal(e, nil, false)
-		log.Println(string(debug.Stack()))
+	// It used to be the case that panic(nil) would cause recover() to return nil,
+	// which we test for here. However, that is no longer the case, hence the extra
+	// check at this point to stop panic(nil) from propagating here. (as of Go 1.21)
+	if recovered != nil {
+		if _, isNilPanic := recovered.(*runtime.PanicNilError); !isNilPanic {
+			e := txnErrorFromPanic(time.Now(), recovered)
+			e.Stack = getStackTrace()
+			thd.noticeErrorInternal(e, nil, false)
+			log.Println(string(debug.Stack()))
+		}
 	}
 
 	txn.markEnd(time.Now(), thd.thread)
@@ -541,9 +548,12 @@ func (thd *thread) End(recovered interface{}) error {
 	}
 
 	// Note that if a consumer uses `panic(nil)`, the panic will not
-	// propagate.
-	if nil != recovered {
-		panic(recovered)
+	// propagate.  Update: well, not anymore. Go now returns an actual
+	// non-nil value in this case.
+	if recovered != nil {
+		if _, isNilPanic := recovered.(*runtime.PanicNilError); !isNilPanic {
+			panic(recovered)
+		}
 	}
 
 	return nil
@@ -1384,4 +1394,19 @@ func (txn *txn) setCsecData() {
 	if txn.csecData == nil && IsSecurityAgentPresent() {
 		txn.csecData = secureAgent.SendEvent("NEW_GOROUTINE", "")
 	}
+}
+
+func (txn *txn) getCsecAttributes() any {
+	txn.Lock()
+	defer txn.Unlock()
+	return txn.csecAttributes
+}
+
+func (txn *txn) setCsecAttributes(key, value string) {
+	txn.Lock()
+	defer txn.Unlock()
+	if txn.csecAttributes == nil {
+		txn.csecAttributes = map[string]any{}
+	}
+	txn.csecAttributes[key] = value
 }

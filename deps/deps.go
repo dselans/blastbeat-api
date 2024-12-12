@@ -20,15 +20,13 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	ss "github.com/your_org/go-svc-template/services/state"
-
-	sb "github.com/your_org/go-svc-template/backends/state"
-
+	"github.com/superpowerdotcom/go-lib-common/clog"
 	"github.com/your_org/go-svc-template/backends/cache"
-	"github.com/your_org/go-svc-template/clog"
+	sb "github.com/your_org/go-svc-template/backends/state"
 	"github.com/your_org/go-svc-template/config"
 	"github.com/your_org/go-svc-template/services/processor"
 	"github.com/your_org/go-svc-template/services/publisher"
+	ss "github.com/your_org/go-svc-template/services/state"
 )
 
 const (

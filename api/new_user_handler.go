@@ -16,7 +16,7 @@ package api
 //	"google.golang.org/protobuf/encoding/protojson"
 //
 //	sb "github.com/superpowerdotcom/go-svc-template/backends/state"
-//	"github.com/superpowerdotcom/go-svc-template/validate"
+//	""github.com/superpowerdotcom/go-lib-common/validate"
 //)
 //
 //type NewUserRequest struct {

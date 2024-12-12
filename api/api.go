@@ -10,9 +10,9 @@ import (
 
 	"github.com/newrelic/go-agent/v3/integrations/nrhttprouter"
 	"github.com/pkg/errors"
+	"github.com/superpowerdotcom/go-lib-common/clog"
 	"go.uber.org/zap"
 
-	"github.com/your_org/go-svc-template/clog"
 	"github.com/your_org/go-svc-template/config"
 	"github.com/your_org/go-svc-template/deps"
 )
