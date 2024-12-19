@@ -15,12 +15,11 @@ require (
 	github.com/newrelic/go-agent/v3/integrations/nrhttprouter v1.1.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.30.0
-	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.6.1
 	github.com/sirupsen/logrus v1.9.3
-	github.com/streamdal/rabbit v0.1.21
+	github.com/streamdal/rabbit v0.1.26
 	github.com/superpowerdotcom/events v0.0.81
 	github.com/superpowerdotcom/go-lib-common v0.0.7
 	go.uber.org/zap v1.27.0
@@ -41,7 +40,6 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/relistan/go-director v0.0.0-20240410125439-78829fce487d // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

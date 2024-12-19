@@ -128,7 +128,7 @@ func (p *Processor) StartConsumers() error {
 		logger.Debug("Launching proc consumers", zap.Int("numConsumers", r.NumConsumers), zap.String("entryName", name))
 
 		for n := 0; n < r.NumConsumers; n++ {
-			go r.RabbitInstance.Consume(context.Background(), consumerErrCh, r.funcReal)
+			go r.RabbitInstance.Consume(context.Background(), consumerErrCh, r.funcReal, rabbit.DefaultAckPolicy())
 		}
 	}
 
