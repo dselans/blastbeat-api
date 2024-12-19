@@ -3,10 +3,9 @@ package processor
 import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/superpowerdotcom/events/build/proto/go/common"
+	"github.com/superpowerdotcom/go-lib-common/validate"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
-
-	"github.com/your_org/go-svc-template/validate"
 )
 
 // ConsumeFunc is a consumer function that will be executed by the "rabbit"

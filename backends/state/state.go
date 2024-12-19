@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/your_org/go-svc-template/clog"
+	"github.com/superpowerdotcom/go-lib-common/clog"
 )
 
 var (

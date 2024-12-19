@@ -1,35 +1,29 @@
 package processor
 
 import (
-	"time"
-
 	"github.com/pkg/errors"
 	"github.com/superpowerdotcom/events/build/proto/go/common"
+	"github.com/superpowerdotcom/go-lib-common/validate"
 	"go.uber.org/zap"
 
-	"github.com/your_org/go-svc-template/backends/cache"
 	"github.com/your_org/go-svc-template/backends/state"
-	"github.com/your_org/go-svc-template/validate"
 )
 
 func (p *Processor) handleUserCreated(event *common.Event) error {
 	logger := p.log.With(zap.String("method", "handleUserCreatedEvent"))
 
-	userCreated := event.GetUserCreated()
-
 	logger.Debug("Validating user created event")
 
-	if err := validate.UserCreatedEvent(userCreated); err != nil {
+	if err := validate.UserCreatedEvent(event); err != nil {
 		logger.Error("failed to validate user created event", zap.Error(err))
 		return errors.Wrap(err, "failed to validate user created event")
 	}
 
+	userCreated := event.GetUserCreated()
+	
 	logger = logger.With(zap.String("id", userCreated.User.Id))
 
 	logger.Debug("Writing user to cache")
-
-	// Update cache for 5s
-	p.options.Cache.Set(cache.UserPrefix+":"+userCreated.User.Id, userCreated.User, 5*time.Second)
 
 	// Update global state
 	//
@@ -55,21 +49,18 @@ func (p *Processor) handleUserUpdated(event *common.Event) error {
 	logger := p.log.With(zap.String("method", "handleUserUpdatedEvent"))
 	logger.Debug("received user updated event")
 
-	userUpdated := event.GetUserUpdated()
-
 	logger.Debug("Validating user.updated event")
 
-	if err := validate.UserUpdatedEvent(userUpdated); err != nil {
+	if err := validate.UserUpdatedEvent(event); err != nil {
 		logger.Error("failed to validate user updated event", zap.Error(err))
 		return errors.Wrap(err, "failed to validate user updated event")
 	}
 
+	userUpdated := event.GetUserUpdated()
+
 	logger = logger.With(zap.String("id", userUpdated.User.Id))
 
 	logger.Debug("Updating user in cache")
-
-	// Update cache for 5s
-	p.options.Cache.Set(cache.UserPrefix+":"+userUpdated.User.Id, userUpdated.User, 5*time.Second)
 
 	// Update global state
 	//
@@ -87,21 +78,18 @@ func (p *Processor) handleUserUpdated(event *common.Event) error {
 func (p *Processor) handleUserDeleted(event *common.Event) error {
 	logger := p.log.With(zap.String("method", "handleUserDeletedEvent"))
 
-	userDeleted := event.GetUserDeleted()
-
 	logger.Debug("Validating user.deleted event")
 
-	if err := validate.UserDeletedEvent(userDeleted); err != nil {
+	if err := validate.UserDeletedEvent(event); err != nil {
 		logger.Error("failed to validate user deleted event", zap.Error(err))
 		return errors.Wrap(err, "failed to validate user deleted event")
 	}
 
+	userDeleted := event.GetUserDeleted()
+
 	logger = logger.With(zap.String("id", userDeleted.User.Id))
 
 	logger.Debug("Removing user from cache")
-
-	// Remove cache (if exists)
-	p.options.Cache.Remove(cache.UserPrefix + ":" + userDeleted.User.Id)
 
 	// Update global state
 	if err := p.options.StateService.DeleteUser(p.options.ShutdownCtx, userDeleted.User.Id); err != nil {

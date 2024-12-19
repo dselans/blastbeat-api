@@ -4,6 +4,8 @@ import (
 	"net/http"
 )
 
+const AttributeCsecRoute = "ROUTE"
+
 // secureAgent is a global interface point for the nrsecureagent's hooks into the go agent.
 // The default value for this is a noOpSecurityAgent value, which has null definitions for
 // the methods. The Go compiler is expected to optimize away all the securityAgent method
@@ -40,7 +42,8 @@ type securityAgent interface {
 func (app *Application) RegisterSecurityAgent(s securityAgent) {
 	if app != nil && app.app != nil && s != nil {
 		secureAgent = s
-		if app.app.run != nil {
+		run, _ := app.app.getState()
+		if run.Reply.IsConnectedToNewRelic() {
 			secureAgent.RefreshState(getLinkedMetaData(app.app))
 		}
 	}
