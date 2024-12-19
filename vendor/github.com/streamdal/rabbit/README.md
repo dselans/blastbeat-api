@@ -1,6 +1,6 @@
 rabbit
 ======
-[![](https://godoc.org/github.com/streamdal/rabbit?status.svg)](http://godoc.org/github.com/batchcorp/rabbit) [![Master build status](https://github.com/streamdal/rabbit/workflows/main/badge.svg)](https://github.com/batchcorp/rabbit/actions) [![Go Report Card](https://goreportcard.com/badge/github.com/streamdal/rabbit)](https://goreportcard.com/report/github.com/streamdal/rabbit)
+[![](https://godoc.org/github.com/streamdal/rabbit?status.svg)](http://godoc.org/github.com/streamdal/rabbit) [![Master build status](https://github.com/streamdal/rabbit/workflows/main/badge.svg)](https://github.com/streamdal/rabbit/actions) [![Go Report Card](https://goreportcard.com/badge/github.com/streamdal/rabbit)](https://goreportcard.com/report/github.com/streamdal/rabbit)
 
 A RabbitMQ wrapper lib around ~[streadway/amqp](https://github.com/streadway/amqp)~ [rabbitmq/amqp091-go](https://github.com/rabbitmq/amqp091-go) 
 with some bells and whistles.
@@ -80,4 +80,30 @@ func main() {
     r.Consume(..)
     cancel()
 }
+```
+
+### Retry Policies
+
+You can specify a retry policy for the consumer.
+A pre-made ACK retry policy is available in the library at `rp := rabbit.DefaultAckPolicy()`. This policy will retry
+acknowledgement unlimited times
+
+You can also create a new policy using the `rabbit.NewRetryPolicy(maxAttempts, time.Millisecond * 200, time.Second, ...)` function.
+
+The retry policy can then be passed to consume functions as an argument:
+
+```go
+consumeFunc := func(msg amqp.Delivery) error {
+    fmt.Printf("Received new message: %+v\n", msg)
+    
+    numReceived++
+    
+    if numReceived > 1 {
+            r.Stop()
+        }
+    }
+
+rp := rabbit.DefaultAckPolicy()
+
+r.Consume(ctx, nil, consumeFunc, rp)
 ```

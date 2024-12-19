@@ -21,7 +21,6 @@ import (
 
 	"github.com/pkg/errors"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/relistan/go-director"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -30,18 +29,23 @@ const (
 	// to reconnect to a rabbit server
 	DefaultRetryReconnectSec = 60
 
+	// DefaultStopTimeout is the default amount of time Stop() will wait for
+	// consume function(s) to exit.
+	DefaultStopTimeout = 5 * time.Second
+
 	// Both means that the client is acting as both a consumer and a producer.
 	Both Mode = 0
 	// Consumer means that the client is acting as a consumer.
 	Consumer Mode = 1
 	// Producer means that the client is acting as a producer.
 	Producer Mode = 2
+
+	ForceReconnectHeader = "rabbit-force-reconnect"
 )
 
 var (
-	// ErrShutdown will be returned if the underlying connection has already
-	// been closed (ie. if you Close()'d and then tried to Publish())
-	ErrShutdown = errors.New("connection has been shutdown")
+	// ErrShutdown will be returned if the client is shutdown via Stop() or Close()
+	ErrShutdown = errors.New("client is shutdown")
 
 	// DefaultConsumerTag is used for identifying consumer
 	DefaultConsumerTag = "c-rabbit-" + uuid.NewV4().String()[0:8]
@@ -53,10 +57,10 @@ var (
 // IRabbit is the interface that the `rabbit` library implements. It's here as
 // convenience.
 type IRabbit interface {
-	Consume(ctx context.Context, errChan chan *ConsumeError, f func(msg amqp.Delivery) error)
-	ConsumeOnce(ctx context.Context, runFunc func(msg amqp.Delivery) error) error
-	Publish(ctx context.Context, routingKey string, payload []byte) error
-	Stop() error
+	Consume(ctx context.Context, errChan chan *ConsumeError, f func(msg amqp.Delivery) error, rp ...*RetryPolicy)
+	ConsumeOnce(ctx context.Context, runFunc func(msg amqp.Delivery) error, rp ...*RetryPolicy) error
+	Publish(ctx context.Context, routingKey string, payload []byte, headers ...amqp.Table) error
+	Stop(timeout ...time.Duration) error
 	Close() error
 }
 
@@ -66,10 +70,13 @@ type Rabbit struct {
 	Conn                    *amqp.Connection
 	ConsumerDeliveryChannel <-chan amqp.Delivery
 	ConsumerRWMutex         *sync.RWMutex
+	ConsumerWG              *sync.WaitGroup
 	NotifyCloseChan         chan *amqp.Error
+	ReconnectChan           chan struct{}
+	ReconnectInProgress     bool
+	ReconnectInProgressMtx  *sync.RWMutex
 	ProducerServerChannel   *amqp.Channel
 	ProducerRWMutex         *sync.RWMutex
-	ConsumeLooper           director.Looper
 	Options                 *Options
 
 	shutdown bool
@@ -142,8 +149,8 @@ type Options struct {
 	// Whether to declare/create queue on connect; used only if QueueDeclare set to true
 	QueueDeclare bool
 
-	// Additional arguements to pass to the queue declaration or binding
-	// https://github.com/batchcorp/plumber/issues/210
+	// Additional arguments to pass to the queue declaration or binding
+	// https://github.com/streamdal/plumber/issues/210
 	QueueArgs map[string]interface{}
 
 	// Whether to automatically acknowledge consumed message(s)
@@ -209,12 +216,15 @@ func New(opts *Options) (*Rabbit, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	r := &Rabbit{
-		Conn:            ac,
-		ConsumerRWMutex: &sync.RWMutex{},
-		NotifyCloseChan: make(chan *amqp.Error),
-		ProducerRWMutex: &sync.RWMutex{},
-		ConsumeLooper:   director.NewFreeLooper(director.FOREVER, make(chan error, 1)),
-		Options:         opts,
+		Conn:                   ac,
+		ConsumerRWMutex:        &sync.RWMutex{},
+		ConsumerWG:             &sync.WaitGroup{},
+		NotifyCloseChan:        make(chan *amqp.Error),
+		ReconnectChan:          make(chan struct{}, 1),
+		ReconnectInProgress:    false,
+		ReconnectInProgressMtx: &sync.RWMutex{},
+		ProducerRWMutex:        &sync.RWMutex{},
+		Options:                opts,
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -230,7 +240,7 @@ func New(opts *Options) (*Rabbit, error) {
 	ac.NotifyClose(r.NotifyCloseChan)
 
 	// Launch connection watcher/reconnect
-	go r.watchNotifyClose()
+	go r.runWatcher()
 
 	return r, nil
 }
@@ -356,7 +366,12 @@ func validMode(mode Mode) error {
 // If the server goes away, `Consume` will automatically attempt to reconnect.
 // Subsequent reconnect attempts will sleep/wait for `DefaultRetryReconnectSec`
 // between attempts.
-func (r *Rabbit) Consume(ctx context.Context, errChan chan *ConsumeError, f func(msg amqp.Delivery) error) {
+func (r *Rabbit) Consume(ctx context.Context, errChan chan *ConsumeError, f func(msg amqp.Delivery) error, rp ...*RetryPolicy) {
+	var retry *RetryPolicy
+	if len(rp) > 0 {
+		retry = rp[0]
+	}
+
 	if r.shutdown {
 		r.log.Error(ErrShutdown)
 		return
@@ -367,50 +382,97 @@ func (r *Rabbit) Consume(ctx context.Context, errChan chan *ConsumeError, f func
 		return
 	}
 
+	r.ConsumerWG.Add(1)
+	defer r.ConsumerWG.Done()
+
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
 	r.log.Debug("waiting for messages from rabbit ...")
 
-	var quit bool
+	var retries int
 
-	r.ConsumeLooper.Loop(func() error {
-		// This is needed to prevent context flood in case .Quit() wasn't picked
-		// up quickly enough by director
-		if quit {
-			time.Sleep(25 * time.Millisecond)
-			return nil
-		}
-
+MAIN:
+	for {
 		select {
 		case msg := <-r.delivery():
-			if err := f(msg); err != nil {
-				r.log.Debugf("error during consume: %s", err)
+			if _, ok := msg.Headers[ForceReconnectHeader]; ok || msg.Acknowledger == nil {
+				r.writeError(errChan, &ConsumeError{
+					Message: &msg,
+					Error:   errors.New("nil acknowledger detected - sending reconnect signal"),
+				})
 
-				if errChan != nil {
-					// Write in a goroutine in case error channel is not consumed fast enough
-					go func() {
-						errChan <- &ConsumeError{
+				r.ReconnectChan <- struct{}{}
+
+				// No point in continuing execution of consumer func as the
+				// delivery msg is incomplete/invalid.
+				continue
+			}
+
+		RETRY:
+			for {
+				if err := f(msg); err != nil {
+					if retry != nil && retry.ShouldRetry() {
+						dur := retry.Duration(retries)
+
+						r.writeError(errChan, &ConsumeError{
 							Message: &msg,
-							Error:   err,
-						}
-					}()
+							Error:   fmt.Errorf("[Retry %s] error during consume: %s", retry.AttemptCount(), err),
+						})
+
+						time.Sleep(dur)
+						retries++
+						continue RETRY
+					}
+
+					r.writeError(errChan, &ConsumeError{
+						Message: &msg,
+						Error:   fmt.Errorf("error during consume: %s", err),
+					})
+
+					// We're not retrying here, break out of retry loop and return
+					// control flow to MAIN's loop
+					break
 				}
+
+				// Exit retry loop on success
+				break
 			}
 		case <-ctx.Done():
-			r.log.Warn("stopped via context")
-			r.ConsumeLooper.Quit()
-			quit = true
+			r.log.Warn("Consume stopped via local context")
+			break MAIN
 		case <-r.ctx.Done():
-			r.log.Warn("stopped via Stop()")
-			r.ConsumeLooper.Quit()
-			quit = true
+			r.log.Warn("Consume stopped via global context")
+			break MAIN
 		}
+	}
 
-		return nil
-	})
 	r.log.Debug("Consume finished - exiting")
+}
+
+func (r *Rabbit) writeError(errChan chan *ConsumeError, err *ConsumeError) {
+	if err == nil {
+		r.log.Error("nil 'err' passed to writeError - bug?")
+		return
+	}
+
+	r.log.Warnf("writeError(): %s", err.Error)
+
+	if errChan == nil {
+		// Don't have an error channel, nothing else to do
+		return
+	}
+
+	// Only write to errChan if it's not full (to avoid goroutine leak)
+	if len(errChan) > 0 {
+		r.log.Warn("errChan is full - dropping message")
+		return
+	}
+
+	go func() {
+		errChan <- err
+	}()
 }
 
 // ConsumeOnce will consume exactly one message from the configured queue,
@@ -418,7 +480,12 @@ func (r *Rabbit) Consume(ctx context.Context, errChan chan *ConsumeError, f func
 //
 // Same as with `Consume()`, you can pass in a context to cancel `ConsumeOnce()`
 // or run `Stop()`.
-func (r *Rabbit) ConsumeOnce(ctx context.Context, runFunc func(msg amqp.Delivery) error) error {
+func (r *Rabbit) ConsumeOnce(ctx context.Context, runFunc func(msg amqp.Delivery) error, rp ...*RetryPolicy) error {
+	var retry *RetryPolicy
+	if len(rp) > 0 {
+		retry = rp[0]
+	}
+
 	if r.shutdown {
 		return ErrShutdown
 	}
@@ -433,16 +500,43 @@ func (r *Rabbit) ConsumeOnce(ctx context.Context, runFunc func(msg amqp.Delivery
 
 	r.log.Debug("waiting for a single message from rabbit ...")
 
+	var retries int
+
 	select {
 	case msg := <-r.delivery():
-		if err := runFunc(msg); err != nil {
-			return err
+		if msg.Acknowledger == nil {
+			r.log.Warn("Detected nil acknowledger - sending signal to rabbit lib to reconnect")
+
+			r.ReconnectChan <- struct{}{}
+
+			return errors.New("detected nil acknowledger - sent signal to reconnect to RabbitMQ")
+		}
+
+	RETRY:
+		for {
+			if err := runFunc(msg); err != nil {
+				if retry != nil && retry.ShouldRetry() {
+					dur := retry.Duration(retries)
+
+					r.log.Warnf("[Retry %s] error during consume: %s", retry.AttemptCount(), err)
+
+					time.Sleep(dur)
+					retries++
+					continue RETRY
+				}
+
+				r.log.Debug("ConsumeOnce finished - exiting")
+				return err
+			}
+
+			break
 		}
 	case <-ctx.Done():
-		r.log.Warn("stopped via context")
+		r.log.Warn("ConsumeOnce stopped via local context")
+
 		return nil
 	case <-r.ctx.Done():
-		r.log.Warn("stopped via Stop()")
+		r.log.Warn("ConsumeOnce stopped via global context")
 		return nil
 	}
 
@@ -453,7 +547,7 @@ func (r *Rabbit) ConsumeOnce(ctx context.Context, runFunc func(msg amqp.Delivery
 
 // Publish publishes one message to the configured exchange, using the specified
 // routing key.
-func (r *Rabbit) Publish(ctx context.Context, routingKey string, body []byte) error {
+func (r *Rabbit) Publish(ctx context.Context, routingKey string, body []byte, headers ...amqp.Table) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -484,11 +578,19 @@ func (r *Rabbit) Publish(ctx context.Context, routingKey string, body []byte) er
 	// Create channels for error and done signals
 	chanErr := make(chan error)
 	chanDone := make(chan struct{})
+
 	go func() {
+		var realHeaders amqp.Table
+
+		if len(headers) > 0 {
+			realHeaders = headers[0]
+		}
+
 		if err := r.ProducerServerChannel.Publish(r.Options.Bindings[0].ExchangeName, routingKey, false, false, amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			Body:         body,
 			AppId:        r.Options.AppID,
+			Headers:      realHeaders,
 		}); err != nil {
 			// Signal there is an error
 			chanErr <- err
@@ -514,16 +616,40 @@ func (r *Rabbit) Publish(ctx context.Context, routingKey string, body []byte) er
 	}
 }
 
-// Stop stops an in-progress `Consume()` or `ConsumeOnce()`.
-func (r *Rabbit) Stop() error {
+// Stop stops an in-progress `Consume()` or `ConsumeOnce()`
+func (r *Rabbit) Stop(timeout ...time.Duration) error {
 	r.cancel()
-	return nil
+
+	doneCh := make(chan struct{})
+
+	// This will leak if consumer(s) don't exit within timeout
+	go func() {
+		r.ConsumerWG.Wait()
+		doneCh <- struct{}{}
+	}()
+
+	stopTimeout := DefaultStopTimeout
+
+	if len(timeout) > 0 {
+		stopTimeout = timeout[0]
+	}
+
+	select {
+	case <-doneCh:
+		return nil
+	case <-time.After(stopTimeout):
+		return fmt.Errorf("timeout waiting for consumer to stop after '%v'", stopTimeout)
+	}
 }
 
 // Close stops any active Consume and closes the amqp connection (and channels using the conn)
 //
 // You should re-instantiate the rabbit lib once this is called.
 func (r *Rabbit) Close() error {
+	if r.shutdown {
+		return ErrShutdown
+	}
+
 	r.cancel()
 
 	if err := r.Conn.Close(); err != nil {
@@ -535,12 +661,30 @@ func (r *Rabbit) Close() error {
 	return nil
 }
 
-func (r *Rabbit) watchNotifyClose() {
-	// TODO: Use a looper here
-	for {
-		closeErr := <-r.NotifyCloseChan
+func (r *Rabbit) getReconnectInProgress() bool {
+	r.ReconnectInProgressMtx.RLock()
+	defer r.ReconnectInProgressMtx.RUnlock()
 
-		r.log.Debugf("received message on notify close channel: '%+v' (reconnecting)", closeErr)
+	return r.ReconnectInProgress
+}
+
+func (r *Rabbit) runWatcher() {
+	for {
+		select {
+		case closeErr := <-r.NotifyCloseChan:
+			r.log.Debugf("received message on notify close channel: '%+v' (reconnecting)", closeErr)
+		case <-r.ReconnectChan:
+			if r.getReconnectInProgress() {
+				// Already reconnecting, nothing to do
+				r.log.Debug("received reconnect signal (already reconnecting)")
+				return
+			}
+
+			r.ReconnectInProgressMtx.Lock()
+			r.ReconnectInProgress = true
+
+			r.log.Debug("received reconnect signal (reconnecting)")
+		}
 
 		// Acquire mutex to pause all consumers/producers while we reconnect AND prevent
 		// access to the channel map
@@ -556,11 +700,13 @@ func (r *Rabbit) watchNotifyClose() {
 				time.Sleep(time.Duration(r.Options.RetryReconnectSec) * time.Second)
 				continue
 			}
+
 			r.log.Debugf("successfully reconnected after %d attempts", attempts)
+
 			break
 		}
 
-		// Create and set a new notify close channel (since old one gets shutdown)
+		// Create and set a new notify close channel (since old one may have gotten shutdown)
 		r.NotifyCloseChan = make(chan *amqp.Error, 0)
 		r.Conn.NotifyClose(r.NotifyCloseChan)
 
@@ -585,7 +731,14 @@ func (r *Rabbit) watchNotifyClose() {
 		// Unlock so that consumers/producers can begin reading messages from a new channel
 		r.ConsumerRWMutex.Unlock()
 		r.ProducerRWMutex.Unlock()
-		r.log.Debug("watchNotifyClose has completed successfully")
+
+		// If this was a requested reconnect - reset in progress flag
+		if r.ReconnectInProgress {
+			r.ReconnectInProgress = false
+			r.ReconnectInProgressMtx.Unlock()
+		}
+
+		r.log.Debug("runWatcher iteration has completed successfully")
 	}
 }
 
