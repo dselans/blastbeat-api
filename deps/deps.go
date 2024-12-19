@@ -21,7 +21,6 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/superpowerdotcom/go-lib-common/clog"
-	"github.com/your_org/go-svc-template/backends/cache"
 	sb "github.com/your_org/go-svc-template/backends/state"
 	"github.com/your_org/go-svc-template/config"
 	"github.com/your_org/go-svc-template/services/processor"
@@ -39,7 +38,6 @@ type Dependencies struct {
 	// Backends
 	ProcessorRabbitBackend rabbit.IRabbit
 	PublisherRabbitBackend rabbit.IRabbit
-	CacheBackend           cache.ICache
 	RedisBackend           *redis.Client
 	RedisLockBackend       *redislock.Client
 	StateBackend           sb.IState
@@ -214,16 +212,6 @@ func (d *Dependencies) setupHealth() error {
 func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	llog := d.Log.With(zap.String("method", "setupBackends"))
 
-	llog.Debug("Setting up cache backend")
-
-	// CacheBackend k/v store
-	cb, err := cache.New()
-	if err != nil {
-		return errors.Wrap(err, "unable to create new cache instance")
-	}
-
-	d.CacheBackend = cb
-
 	llog.Debug("Setting up redis backend")
 
 	// Redis backend for state
@@ -337,7 +325,6 @@ func (d *Dependencies) setupServices(cfg *config.Config) error {
 		Backend:     d.StateBackend,
 		Log:         d.Log,
 		ShutdownCtx: d.ShutdownCtx,
-		Cache:       d.CacheBackend,
 	})
 	if err != nil {
 		return errors.Wrap(err, "unable to setup state service")
@@ -349,7 +336,6 @@ func (d *Dependencies) setupServices(cfg *config.Config) error {
 
 	// Setup service that will consume and process messages from RabbitMQ
 	procService, err := processor.New(&processor.Options{
-		Cache: d.CacheBackend,
 		RabbitMap: map[string]*processor.RabbitConfig{
 			"main": {
 				RabbitInstance: d.ProcessorRabbitBackend,

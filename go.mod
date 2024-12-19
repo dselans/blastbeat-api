@@ -21,8 +21,8 @@ require (
 	github.com/redis/go-redis/v9 v9.6.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/streamdal/rabbit v0.1.21
-	github.com/superpowerdotcom/events v0.0.78
-	github.com/superpowerdotcom/go-lib-common v0.0.1
+	github.com/superpowerdotcom/events v0.0.81
+	github.com/superpowerdotcom/go-lib-common v0.0.7
 	go.uber.org/zap v1.27.0
 	google.golang.org/protobuf v1.34.2
 )

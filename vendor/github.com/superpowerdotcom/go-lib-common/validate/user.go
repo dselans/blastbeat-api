@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/superpowerdotcom/events/build/proto/go/common"
+	"github.com/superpowerdotcom/events/build/proto/go/merch"
 	"github.com/superpowerdotcom/events/build/proto/go/user"
 )
 
@@ -36,6 +37,9 @@ var (
 	ErrNilUserDeletedEvent = errors.New("event.GetUserDeleted() cannot be nil")
 
 	ErrUserValidationFailed = errors.New("failed to validate user")
+
+	// Card Errors
+	ErrNilCard = errors.New("card entry cannot be nil")
 )
 
 func User(u *user.User) error {
@@ -73,10 +77,6 @@ func User(u *user.User) error {
 
 	if _, err := time.Parse("2006-01-02", u.DateOfBirth); err != nil {
 		return ErrInvalidUserDateOfBirth
-	}
-
-	if err := Address(u.Address); err != nil {
-		return errors.Wrap(err, ErrInvalidUserAddress.Error())
 	}
 
 	return nil
@@ -135,8 +135,14 @@ func UserUpdatedEvent(event *common.Event) error {
 		return ErrNilUserUpdatedEvent
 	}
 
-	if err := User(event.GetUserUpdated().User); err != nil {
+	u := event.GetUserUpdated().User
+
+	if err := User(u); err != nil {
 		return errors.Wrap(err, ErrUserValidationFailed.Error())
+	}
+
+	if err := Address(u.Address); err != nil {
+		return errors.Wrap(err, ErrInvalidUserAddress.Error())
 	}
 
 	return nil
@@ -153,6 +159,18 @@ func UserDeletedEvent(event *common.Event) error {
 
 	if err := User(event.GetUserDeleted().User); err != nil {
 		return errors.Wrap(err, ErrUserValidationFailed.Error())
+	}
+
+	return nil
+}
+
+func Card(card *merch.Card) error {
+	if card == nil {
+		return ErrNilCard
+	}
+
+	if err := User(card.User); err != nil {
+		return ErrUserValidationFailed
 	}
 
 	return nil

@@ -13,7 +13,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/superpowerdotcom/go-lib-common/clog"
-	"github.com/your_org/go-svc-template/backends/cache"
 	"github.com/your_org/go-svc-template/config"
 	"github.com/your_org/go-svc-template/services/state"
 )
@@ -28,7 +27,6 @@ type IProcessor interface {
 
 type Options struct {
 	RabbitMap    map[string]*RabbitConfig
-	Cache        cache.ICache
 	Log          clog.ICustomLog
 	NewRelic     *newrelic.Application
 	StateService state.IState
@@ -73,10 +71,6 @@ func New(opt *Options, cfg *config.Config) (*Processor, error) {
 }
 
 func (p *Processor) validateOptions(opts *Options) error {
-	if opts.Cache == nil {
-		return errors.New("CacheBackend cannot be nil")
-	}
-
 	if opts.Log == nil {
 		return errors.New("Log cannot be nil")
 	}

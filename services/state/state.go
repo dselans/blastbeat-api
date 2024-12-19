@@ -2,7 +2,6 @@ package state
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/superpowerdotcom/events/build/proto/go/user"
@@ -10,7 +9,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/superpowerdotcom/go-lib-common/clog"
-	"github.com/your_org/go-svc-template/backends/cache"
 	sb "github.com/your_org/go-svc-template/backends/state"
 )
 
@@ -32,7 +30,6 @@ type State struct {
 
 type Options struct {
 	Backend     sb.IState
-	Cache       cache.ICache
 	Log         clog.ICustomLog
 	ShutdownCtx context.Context
 }
@@ -57,19 +54,6 @@ func (s State) GetUser(ctx context.Context, id string) (*user.User, error) {
 		ctx = s.opts.ShutdownCtx
 	}
 
-	// Try to get user from cache first
-	cacheUserData, ok := s.opts.Cache.Get(cache.UserPrefix + ":" + id)
-	if ok {
-		s.log.Debug("found user in cache", zap.String("id", id))
-
-		userEntry, ok := cacheUserData.(*user.User)
-		if ok {
-			return userEntry, nil
-		}
-	}
-
-	s.log.Debug("user not found in cache, trying state")
-
 	userData, err := s.opts.Backend.Get(ctx, id, "user")
 	if err != nil {
 		if errors.Is(err, sb.ErrDoesNotExist) {
@@ -86,9 +70,6 @@ func (s State) GetUser(ctx context.Context, id string) (*user.User, error) {
 	if err := proto.Unmarshal([]byte(userData), userEntry); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal existing user")
 	}
-
-	// Add user to cache
-	s.opts.Cache.Set(cache.UserPrefix+":"+id, userEntry, 5*time.Second)
 
 	return userEntry, nil
 }
@@ -166,10 +147,6 @@ func validateOptions(opts *Options) error {
 
 	if opts.ShutdownCtx == nil {
 		return errors.New("shutdown context cannot be nil")
-	}
-
-	if opts.Cache == nil {
-		return errors.New("cache cannot be nil")
 	}
 
 	return nil
