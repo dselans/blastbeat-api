@@ -14,7 +14,7 @@ import (
 func (p *Processor) ConsumeFunc(msg amqp.Delivery) error {
 	logger := p.log.With(zap.String("method", "ConsumeFunc"))
 
-	// ConsumeFunc runs in goroutuine
+	// ConsumeFunc runs in goroutine
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Error("recovered from panic", zap.Any("recovered", r))
