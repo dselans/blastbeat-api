@@ -13,6 +13,15 @@ metadata:
 #    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
 #    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
 
+#spec:
+#  selector:
+#    app: __SERVICE__
+#  ports:
+#  - name: https
+#    port: 443
+#    targetPort: 8080
+#  type: LoadBalancer
+
 spec:
   selector:
     app: __SERVICE__
@@ -20,7 +29,7 @@ spec:
   - name: https
     port: 443
     targetPort: 8080
-  type: LoadBalancer
+  type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: Deployment
