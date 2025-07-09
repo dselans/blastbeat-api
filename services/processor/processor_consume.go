@@ -1,8 +1,11 @@
 package processor
 
 import (
+	"runtime/debug"
+
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/superpowerdotcom/events/build/proto/go/common"
+	"github.com/superpowerdotcom/go-lib-common/util"
 	"github.com/superpowerdotcom/go-lib-common/validate"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -13,19 +16,21 @@ import (
 func (p *Processor) ConsumeFunc(msg amqp.Delivery) error {
 	logger := p.log.With(zap.String("method", "ConsumeFunc"))
 
+	txn := p.options.NewRelic.StartTransaction("ProcessorService.ConsumeFunc")
+	defer txn.End()
+
 	// ConsumeFunc runs in goroutine
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Error("recovered from panic", zap.Any("recovered", r))
+			util.Error(txn, logger, "recovered from panic", nil,
+				zap.Any("panic", r),
+				zap.Stack("stack"),
+				zap.Any("panicTrace", string(debug.Stack())),
+			)
 		}
 	}()
 
-	txn := p.options.NewRelic.StartTransaction("ConsumeFunc")
-	defer txn.End()
-
-	logger = logger.With(zap.String("routingKey", msg.RoutingKey))
-
-	logger.Debug("Received (unvalidated) message on event bus")
+	// logger.Debug("Received (unvalidated) message on event bus")
 
 	// !!!!
 	//

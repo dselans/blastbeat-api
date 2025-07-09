@@ -25,7 +25,7 @@ type ICustomLog interface {
 
 type CustomLog struct {
 	fields    map[string]zap.Field
-	fieldsMtx *sync.Mutex // We need a mutex to avoid concurrent map write panics
+	fieldsMtx *sync.Mutex
 	logger    *zap.Logger
 }
 
@@ -40,13 +40,13 @@ func New(logger *zap.Logger, fields ...zap.Field) ICustomLog {
 
 	return &CustomLog{
 		logger:    logger,
-		fieldsMtx: mtx,
+		fieldsMtx: mtx, // We need a mutex to avoid concurrent map write panics
 		fields:    UpdateMap(mtx, tmpFields, fields...),
 	}
 }
 
 func (c CustomLog) Debug(msg string, fields ...zap.Field) {
-	c.logger.Debug(msg, MapToFields(c.fieldsMtx, c.fields)...)
+	c.logger.Debug(msg, append(MapToFields(c.fieldsMtx, c.fields), fields...)...)
 }
 
 func (c CustomLog) Info(msg string, fields ...zap.Field) {
@@ -66,12 +66,22 @@ func (c CustomLog) Fatal(msg string, fields ...zap.Field) {
 }
 
 func (c CustomLog) With(fields ...zap.Field) ICustomLog {
-	return New(c.logger, MapToFields(c.fieldsMtx, UpdateMap(c.fieldsMtx, c.fields, fields...))...)
+	newFields := make(map[string]zap.Field)
+
+	c.fieldsMtx.Lock()
+	for k, v := range c.fields {
+		newFields[k] = v
+	}
+	c.fieldsMtx.Unlock()
+
+	return New(c.logger, MapToFields(nil, UpdateMap(&sync.Mutex{}, newFields, fields...))...)
 }
 
 func UpdateMap(mtx *sync.Mutex, m map[string]zap.Field, f ...zap.Field) map[string]zap.Field {
-	mtx.Lock()
-	defer mtx.Unlock()
+	if mtx != nil {
+		mtx.Lock()
+		defer mtx.Unlock()
+	}
 
 	for _, field := range f {
 		m[field.Key] = field
@@ -81,10 +91,12 @@ func UpdateMap(mtx *sync.Mutex, m map[string]zap.Field, f ...zap.Field) map[stri
 }
 
 func MapToFields(mtx *sync.Mutex, m map[string]zap.Field) []zap.Field {
-	fields := make([]zap.Field, 0)
+	if mtx != nil {
+		mtx.Lock()
+		defer mtx.Unlock()
+	}
 
-	mtx.Lock()
-	defer mtx.Unlock()
+	fields := make([]zap.Field, 0, len(m))
 
 	for _, field := range m {
 		fields = append(fields, field)

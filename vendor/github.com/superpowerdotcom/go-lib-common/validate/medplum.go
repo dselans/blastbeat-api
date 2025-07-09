@@ -3,12 +3,12 @@ package validate
 import (
 	"fmt"
 
-	c_gp "github.com/google/fhir/go/proto/google/fhir/proto/r4/core/codes_go_proto"
-	"github.com/google/fhir/go/proto/google/fhir/proto/r4/core/datatypes_go_proto"
-	dt_gp "github.com/google/fhir/go/proto/google/fhir/proto/r4/core/datatypes_go_proto"
-	"github.com/google/fhir/go/proto/google/fhir/proto/r4/core/resources/bundle_and_contained_resource_go_proto"
-	p_gp "github.com/google/fhir/go/proto/google/fhir/proto/r4/core/resources/patient_go_proto"
 	"github.com/pkg/errors"
+	"github.com/superpowerdotcom/events/build/proto/go/common"
+	c_gp "github.com/superpowerdotcom/fhir/go/proto/google/fhir/proto/r4/core/codes_go_proto"
+	dt_gp "github.com/superpowerdotcom/fhir/go/proto/google/fhir/proto/r4/core/datatypes_go_proto"
+	bcr_gp "github.com/superpowerdotcom/fhir/go/proto/google/fhir/proto/r4/core/resources/bundle_and_contained_resource_go_proto"
+	p_gp "github.com/superpowerdotcom/fhir/go/proto/google/fhir/proto/r4/core/resources/patient_go_proto"
 )
 
 var (
@@ -32,6 +32,8 @@ var (
 	ErrNilPatientGender           = errors.New("patient gender cannot be nil")
 	ErrUnsetPatientGenderEnum     = errors.New("patient gender must be set to a non-0 enum")
 	ErrPatientValidationFailed    = errors.New("failed to validate patient")
+	ErrNilMedplumWebhookEvent     = errors.New("medplum webhook event cannot be nil")
+	ErrMedplumCRValidationFailed  = errors.New("failed to validate contained resource")
 
 	ErrEmptyAddressList            = errors.New("addresses must have at least one entry")
 	ErrNilAddressEntry             = errors.New("address entry cannot be nil")
@@ -59,7 +61,7 @@ var (
 	ErrFailedContactPointValidation = errors.New("failed to validate contact point")
 )
 
-func MedplumName(names []*datatypes_go_proto.HumanName) error {
+func MedplumName(names []*dt_gp.HumanName) error {
 	if len(names) < 1 {
 		return ErrEmptyNameList
 	}
@@ -90,7 +92,7 @@ func MedplumName(names []*datatypes_go_proto.HumanName) error {
 	return nil
 }
 
-func MedplumSearchResponse(pcr *bundle_and_contained_resource_go_proto.ContainedResource) error {
+func MedplumSearchResponse(pcr *bcr_gp.ContainedResource) error {
 	if pcr == nil {
 		return ErrNilContainedResource
 	}
@@ -106,7 +108,7 @@ func MedplumSearchResponse(pcr *bundle_and_contained_resource_go_proto.Contained
 	return nil
 }
 
-func MedplumPatientCR(pcr *bundle_and_contained_resource_go_proto.ContainedResource, checkID bool) error {
+func MedplumPatientCR(pcr *bcr_gp.ContainedResource, checkID bool) error {
 	if pcr == nil {
 		return ErrNilContainedResource
 	}
@@ -167,7 +169,7 @@ func MedplumPatient(patient *p_gp.Patient, checkID bool) error {
 	return nil
 }
 
-func MedplumAddress(addresses []*datatypes_go_proto.Address) error {
+func MedplumAddress(addresses []*dt_gp.Address) error {
 	if len(addresses) < 1 {
 		return ErrEmptyAddressList
 	}
@@ -315,6 +317,34 @@ func MedplumContactPoint(cps []*dt_gp.ContactPoint) error {
 
 	if !emailFound {
 		return ErrPatientEmailNotFound
+	}
+
+	return nil
+}
+
+func MedplumWebhookEvent(event *common.Event) error {
+	if event == nil {
+		return ErrNilEvent
+	}
+
+	if event.GetMedplumWebhook() == nil {
+		return ErrNilMedplumWebhookEvent
+	}
+
+	cr := event.GetMedplumWebhook().GetContainedResource()
+
+	if err := MedplumContainedResource(cr); err != nil {
+		return errors.Wrap(err, ErrMedplumCRValidationFailed.Error())
+	}
+
+	// TODO: Validate what's contained within the contained resource
+
+	return nil
+}
+
+func MedplumContainedResource(cr *bcr_gp.ContainedResource) error {
+	if cr == nil {
+		return ErrNilContainedResource
 	}
 
 	return nil
