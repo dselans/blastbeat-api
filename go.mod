@@ -20,8 +20,8 @@ require (
 	github.com/redis/go-redis/v9 v9.6.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/streamdal/rabbit v0.1.26
-	github.com/superpowerdotcom/events v0.0.81
-	github.com/superpowerdotcom/go-lib-common v0.0.7
+	github.com/superpowerdotcom/events v0.1.2
+	github.com/superpowerdotcom/go-lib-common v0.0.17
 	go.uber.org/zap v1.27.0
 	google.golang.org/protobuf v1.34.2
 )
@@ -33,8 +33,6 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
-	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/fhir/go v0.7.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/pprof v0.0.0-20230817174616-7a8ec2ada47b // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
@@ -42,6 +40,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
+	github.com/superpowerdotcom/fhir/go v0.0.10 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect

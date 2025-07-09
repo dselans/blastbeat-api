@@ -1,8 +1,13 @@
 package processor
 
 import (
+	"context"
+	"runtime/debug"
+
+	"github.com/newrelic/go-agent/v3/newrelic"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/superpowerdotcom/events/build/proto/go/common"
+	"github.com/superpowerdotcom/go-lib-common/util"
 	"github.com/superpowerdotcom/go-lib-common/validate"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -11,21 +16,26 @@ import (
 // ConsumeFunc is a consumer function that will be executed by the "rabbit"
 // library whenever Consume() rads a new message from RabbitMQ.
 func (p *Processor) ConsumeFunc(msg amqp.Delivery) error {
-	logger := p.log.With(zap.String("method", "ConsumeFunc"))
+	logger := p.log.With(
+		zap.String("method", "ConsumeFunc"),
+		zap.String("routingKey", msg.RoutingKey),
+	)
+
+	txn := p.options.NewRelic.StartTransaction("ProcessorService.ConsumeFunc")
+	defer txn.End()
 
 	// ConsumeFunc runs in goroutine
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Error("recovered from panic", zap.Any("recovered", r))
+			util.Error(txn, logger, "recovered from panic", nil,
+				zap.Any("panic", r),
+				zap.Stack("stack"),
+				zap.Any("panicTrace", string(debug.Stack())),
+			)
 		}
 	}()
 
-	txn := p.options.NewRelic.StartTransaction("ConsumeFunc")
-	defer txn.End()
-
-	logger = logger.With(zap.String("routingKey", msg.RoutingKey))
-
-	logger.Debug("Received (unvalidated) message on event bus")
+	// logger.Debug("Received (unvalidated) message on event bus")
 
 	// !!!!
 	//
@@ -37,7 +47,7 @@ func (p *Processor) ConsumeFunc(msg amqp.Delivery) error {
 	//
 	// !!!!
 	if err := msg.Ack(false); err != nil {
-		logger.Error("Error acknowledging message", zap.Error(err))
+		util.Error(txn, logger, "unable to acknowledge message", err)
 		return nil
 	}
 
@@ -45,38 +55,46 @@ func (p *Processor) ConsumeFunc(msg amqp.Delivery) error {
 	event := &common.Event{}
 
 	if err := proto.Unmarshal(msg.Body, event); err != nil {
-		// TODO: Record error in NR
-		logger.Error("Error unmarshalling event", zap.Error(err))
+		util.Error(txn, logger, "unable to unmarshal event", err)
 		return nil
 	}
 
 	if err := validate.Event(event); err != nil {
-		// TODO: Record error in NR
-		logger.Error("Error validating event", zap.Error(err))
+		util.Error(txn, logger, "unable to validate event", err)
 		return nil
 	}
 
 	logger = logger.With(
-		zap.String("id", event.Id),
-		zap.String("type", event.Type),
-		zap.String("source", event.Source),
+		zap.String("cloudEventID", event.Id),
+		zap.String("cloudEventType", event.Type),
+		zap.String("cloudEventSource", event.Source),
 	)
 
-	logger.Debug("Validated event message")
+	// Create context with logger that we can pass around
+	ctx := context.WithValue(context.Background(), "logger", logger)
+
+	// Now add NewRelic txn to context
+	ctx = newrelic.NewContext(ctx, txn)
+
+	// Add cloud events attributes to NewRelic txn
+	txn.AddAttribute("cloudEventID", event.Id)
+	txn.AddAttribute("cloudEventType", event.Type)
+	txn.AddAttribute("cloudEventSource", event.Source)
+
+	// logger.Debug("Validated event message")
 
 	var err error
 
 	switch event.Data.(type) {
-	case *common.Event_UserCreated:
-		err = p.handleUserCreated(event)
+	case *common.Event_MedplumWebhook:
+		err = p.handleMedplumWebhook(ctx, event)
 	default:
-		logger.Error("Unknown message type", zap.String("type", event.Type))
+		// logger.Debug("Unknown message type", zap.String("type", event.Type))
 		return nil
 	}
 
 	if err != nil {
-		// TODO: Record error in NR
-		logger.Error("Error processing message", zap.Error(err))
+		util.Error(txn, logger, "error processing message", err)
 		return nil
 	}
 
