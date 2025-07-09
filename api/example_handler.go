@@ -12,8 +12,8 @@ const (
 	RoutingKey = "events.webhook"
 )
 
-func (a *API) webhookHandler(rw http.ResponseWriter, r *http.Request) {
-	llog := a.log.With(zap.String("method", "webhookHandler"))
+func (a *API) exampleHandler(rw http.ResponseWriter, r *http.Request) {
+	llog := a.log.With(zap.String("method", "exampleHandler"))
 	llog.Debug("handling POST request", zap.String("remoteAddr", r.RemoteAddr))
 
 	// Read body

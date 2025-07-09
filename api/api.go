@@ -79,7 +79,7 @@ func (a *API) Run() error {
 
 	a.server.Handler = router
 
-	router.HandlerFunc("POST", "/api/v1/webhook", a.webhookHandler)
+	router.HandlerFunc("POST", "/api/v1/example", a.exampleHandler)
 	router.HandlerFunc("GET", "/health-check", a.healthCheckHandler)
 	router.HandlerFunc("GET", "/version", a.versionHandler)
 
