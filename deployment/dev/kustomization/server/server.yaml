@@ -1,0 +1,222 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-svc-template
+  namespace: default
+  labels:
+    app: go-svc-template
+  annotations:
+    doppler.com/project: "go-svc-template"
+    doppler.com/config: "dev_minikube"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-svc-template
+  template:
+    metadata:
+      labels:
+        app: go-svc-template
+    spec:
+      initContainers:
+        - name: wait-for-rabbitmq
+          image: busybox
+          command:
+            [
+              "sh",
+              "-c",
+              "until nc -z rabbitmq.rabbitmq.svc.cluster.local 5672; do echo waiting for rabbitmq; sleep 2; done;",
+            ]
+          env:
+            - name: NAMESPACE
+              value: rabbitmq
+        - name: wait-for-redis
+          image: redis:latest
+          command:
+            - sh
+            - -c
+            - >
+              until redis-cli -h redis.redis.svc.cluster.local -a {{ .GO_AI_ACTIONPLANS_REDIS_PASSWORD }} PING;
+              do echo "Waiting for Redis to be ready...";
+              sleep 2;
+              done
+          env:
+            - name: REDISCLI_AUTH
+              value: "{{ .GO_AI_ACTIONPLANS_REDIS_PASSWORD }}"
+        - name: wait-for-go-medplum-forwarder
+          image: curlimages/curl:8.00.1
+          command:
+            [
+              "sh",
+              "-c",
+              "until curl -s {{ .GO_AI_ACTIONPLANS_MEDPLUM_FORWARDER_URL }}/health-check; do echo waiting for go-medplum-forwarder; sleep 2; done;",
+            ]
+        - name: wait-for-medplum-server
+          image: curlimages/curl:8.00.1
+          command:
+            [
+              "sh",
+              "-c",
+              "until curl -s http://medplum-server.medplum.svc.cluster.local:8103/healthcheck; do echo waiting for medplum-server; sleep 2; done;",
+            ]
+      containers:
+        - name: go-svc-template
+          image: go-svc-template:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "256m"
+            limits:
+              memory: "512Mi"
+              cpu: "512m"
+          livenessProbe:
+            httpGet:
+              path: /health-check
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          env:
+            # Name of the service (used in health-check, version)
+            - name: GO_SVC_TEMPLATE_SERVICE_NAME
+              value: "go-svc-template"
+
+            # HTTP port the service will bind its API server to
+            - name: GO_SVC_TEMPLATE_API_LISTEN_ADDRESS
+              value: "{{ .GO_SVC_TEMPLATE_API_LISTEN_ADDRESS }}"
+
+            # Service uses 'uber/zap' for logging; it has two available log "modes":
+            # 'dev' and 'prod'. 'dev' causes logs to be colorized and human-readable;
+            # 'prod' will log in JSON format w/o colors.
+            - name: GO_SVC_TEMPLATE_LOG_CONFIG
+              value: "{{ .GO_SVC_TEMPLATE_LOG_CONFIG }}"
+
+            # Whether to enable pprof endpoints
+            - name: GO_SVC_TEMPLATE_ENABLE_PPROF
+              value: "{{ .GO_SVC_TEMPLATE_ENABLE_PPROF }}"
+
+            # New Relic license key; remove if not using New Relic
+            - name: GO_SVC_TEMPLATE_NEW_RELIC_LICENSE_KEY
+              value: "{{ .GO_SVC_TEMPLATE_NEW_RELIC_LICENSE_KEY }}"
+
+            # If using NR, how the service will be identified in NR UI
+            - name: GO_SVC_TEMPLATE_NEW_RELIC_APP_NAME
+              value: "go-svc-template (dev)"
+
+            ############### Redis Configuration ###############
+
+            - name: GO_SVC_TEMPLATE_REDIS_URL
+              value: "{{ .GO_SVC_TEMPLATE_REDIS_URL }}"
+
+            - name: GO_SVC_TEMPLATE_REDIS_PASSWORD
+              value: "{{ .GO_SVC_TEMPLATE_REDIS_PASSWORD }}"
+
+            ################ RabbitMQ Consumer / Processor Config #################
+
+            # RabbitMQ URL (expects full DSN)
+            - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_URL
+              value: "{{ .GO_SVC_TEMPLATE_PROCESSOR_RABBIT_URL }}"
+
+            # Name of the exchange queue will be bound to.
+            #
+            # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+            - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_EXCHANGE_NAME
+              value: "events"
+
+            # Whether the service should create the exchange if it doesn't exist.
+            #
+            # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+            - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_EXCHANGE_DECLARE
+              value: "true"
+
+            # When true, the exchange will be created with durable flag so it will
+            # be able to survive a broker restart.
+            #
+            # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+            - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_EXCHANGE_DURABLE
+              value: "true"
+
+            # What routing key consumers will bind to. NOTE: Use '#' for wildcards.
+            #
+            # Example 1: "events.webhooks.wearable" will cause rabbitmq to forward
+            # only wearable webhook events to 'GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_NAME'.
+            #
+            # Example 2: "events.webhooks.#" will cause rabbitmq to forward all
+            # webhook events to 'GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_NAME'.
+            #
+            # Example 3: "events.#.wearable" will cause rabbitmq to forward ALL
+            # wearable events to 'GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_NAME'.
+            #
+            # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+            - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_BINDING_KEYS
+              value: "#"
+
+            # When left empty, rabbitmq will generate a random queue name. This
+            # effectively means that all consumers will receive a COPY of the
+            # message when binding to same routing key. This is a good pattern for
+            # implementing broadcast/fanout-like behavior.
+            #
+            # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+            - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_NAME
+              value: "go-svc-template"
+
+            # Whether the service should create the queue if it doesn't exist.
+            #
+            # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+            - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_DECLARE
+              value: "true"
+
+            # When true, the queue will be created with durable flag so it will
+            # be able to survive a broker restart.
+            #
+            # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+            - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_DURABLE
+              value: "true"
+
+            # When true, rabbitmq will delete the queue when the queue no longer
+            # has any consumers. You probably don't want this.
+            #
+            # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+            - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_AUTO_DELETE
+              value: "false"
+
+            # When true, the queue can only be accessed by exactly one consumer.
+            # You probably don't want this.
+            #
+            # NOTE: Only applicable when 'rabbit' lib is in 'consumer' or 'both' mode.
+            - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_QUEUE_EXCLUSIVE
+              value: "false"
+
+            # Determines the size of the consumer worker pool
+            - name: GO_SVC_TEMPLATE_PROCESSOR_RABBIT_NUM_CONSUMERS
+              value: "1"
+
+            ################ RabbitMQ Producer / Publisher Config #################
+
+            - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_URL
+              value: "{{ .GO_SVC_TEMPLATE_PUBLISHER_RABBIT_URL }}"
+
+            - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_EXCHANGE_NAME
+              value: "events"
+
+            - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_EXCHANGE_DECLARE
+              value: "true"
+
+            - name: GO_SVC_TEMPLATE_PUBLISHER_RABBIT_EXCHANGE_DURABLE
+              value: "true"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-svc-template
+  namespace: default
+spec:
+  selector:
+    app: go-svc-template
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  type: LoadBalancer

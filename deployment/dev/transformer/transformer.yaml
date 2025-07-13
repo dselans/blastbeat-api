@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1
+kind: Transformer
+metadata:
+  name: doppler-transformer
+  annotations:
+    config.kubernetes.io/function: |
+      exec:
+        path: ../../transformer/transformer.cjs

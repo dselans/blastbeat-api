@@ -23,6 +23,7 @@ FORWARD_SCRIPT=./assets/scripts/forward.sh
 PROTOSET_SCRIPT=./assets/scripts/sync-protoset.sh
 DEPLOY_SCRIPT=./assets/scripts/deploy.py
 KSP_SCRIPT=./assets/scripts/ksp.sh
+SETUP_SCRIPT=./assets/scripts/setup.sh
 DOPPLER_CONFIG ?= dev
 DEPLOY_CONFIG ?= deploy.dev.yml
 PLUMBER_QUEUE_NAME ?= plumber-$(shell date | sha256sum | cut -b 1-6)
@@ -55,31 +56,30 @@ help:
 ### Dev
 
 .PHONY: run
-run: description = Run go-svc-template locally + port-forward deps to localhost (ctrl-c to stop)
+run: description = Run go-svc-template locally
 run: prereq
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
 	$(GO) run `ls -1 *.go | grep -v _test.go`
 
-.PHONY: run/docker
-docker/run: description = Build and run container + deps via docker-compose
-docker/run:
+.PHONY: run/skaffold
+run/skaffold: description = Run dependencies and server via skaffold
+run/skaffold: prereq util/minikube/set-context
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
-	docker-compose up -d
+	cd deployment/dev && /bin/bash -c "skaffold dev -f skaffold.yaml"
 
-.PHONY: run/deps
-run/deps: description = Run/start dependencies
-run/deps: prereq check-doppler-secrets util/dev/start
-run/deps:
+.PHONY: run/skaffold/core
+run/skaffold/core: description = Run/start core services
+run/skaffold/core: prereq util/minikube/set-context
+run/skaffold/core:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
-	kubectl config use-context minikube && \
-	kubectl apply -f ./deploy.dev.yml
+	cd deployment/dev && /bin/bash -c "skaffold dev -f skaffold.core.yaml"
 
-.PHONY: run/deps/forward
-run/deps/forward: description = Forward ports for dependencies
-run/deps/forward: prereq
+.PHONY: run/skaffold/server
+run/skaffold/server: description = Run/start server
+run/skaffold/server: prereq util/minikube/set-context
+run/skaffold/server:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
-	@bash $(SHARED_SCRIPT) debug "Forwarding ports to minikube (ctrl-c to stop) ..."
-	@bash $(FORWARD_SCRIPT) all
+	cd deployment/dev && /bin/bash -c "skaffold dev -f skaffold.server.yaml"
 
 ### Build
 
@@ -133,7 +133,7 @@ deploy/stg: prereq
 	DOPPLER_PROJECT=go-svc-template \
 	DOPPLER_CONFIG=stg \
 	DEPLOY_ENV=STG \
-	DEPLOY_CONFIG=deploy.stg.yml \
+	DEPLOY_CONFIG=deployment/deploy.stg.yml \
 	KSP_SERVICE=go-svc-template \
 	python3 $(DEPLOY_SCRIPT) -r go-svc-template -t deploy/hidden
 
@@ -144,7 +144,7 @@ deploy/prd: prereq check-doppler-secrets
 	DOPPLER_PROJECT=go-svc-template \
 	DOPPLER_CONFIG=prd \
 	DEPLOY_ENV=PRD \
-	DEPLOY_CONFIG=deploy.prd.yml \
+	DEPLOY_CONFIG=deployment/deploy.prd.yml \
 	KSP_SERVICE=go-svc-template \
 	python3 $(DEPLOY_SCRIPT) -r go-svc-template -t deploy/hidden -f prd
 
@@ -174,18 +174,7 @@ test/coverage:
 .PHONY: util/setup/shared
 util/setup/shared:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
-	brew install jq && \
-	brew install kubectl
-
-.PHONY: util/setup/linux
-util/setup/linux: description = Install dev tools for linux
-util/setup/linux: util/setup/shared
-	GO111MODULE=off go get github.com/maxbrunsfeld/counterfeiter
-
-.PHONY: util/setup/darwin
-util/setup/darwin: description = Install dev tools for darwin
-util/setup/darwin: util/setup/shared
-	GO111MODULE=off go get github.com/maxbrunsfeld/counterfeiter
+	@bash $(SETUP_SCRIPT)
 
 .PHONY: util/login-aws-ecr
 util/login-aws-ecr: description = Login to AWS ECR
@@ -194,45 +183,48 @@ util/login-aws-ecr:
 	aws ecr get-login-password --region us-east-1 | \
 	docker login --username AWS --password-stdin $(AWS_ECR_URL)
 
-.PHONY: util/dev/start
-util/dev/start: description = Start minikube for local dev
-util/dev/start:
+.PHONY: util/ecr/auth
+util/ecr/auth: description = Create ECR registry secrets in minikube (needed for pulling private images in minikube)
+util/ecr/auth: prereq util/login-aws-ecr util/minikube/set-context util/minikube/start
+	@bash $(SHARED_SCRIPT) info "Creating docker registry secret in minikube ..."
+	@bash $(REGISTRY_AUTH_SCRIPT)
+
+.PHONY: util/minikube/start
+util/minikube/start: description = Start minikube for local dev
+util/minikube/start:
 	minikube status || minikube start
 
-.PHONY: util/dev/stop
-util/dev/stop: description = Stop minikube for local dev
-util/dev/stop:
+.PHONY: util/minikube/stop
+util/minikube/stop: description = Stop minikube for local dev
+util/minikube/stop:
 	minikube status || minikube stop
 
-.PHONY: util/dev/reset
-util/dev/reset: description = Reset minikube for local dev (delete all imgs, pods, etc)
-util/dev/reset:
-	minikube status || minikube delete
-
-.PHONY: util/dev/forward
-util/dev/forward: description = Forward ports to minikube for local dev
-util/dev/forward:
+.PHONY: util/minikube/recreate
+util/minikube/recreate: description = Delete + recreate minikube + start deps
+util/minikube/recreate:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
-	@bash $(SHARED_SCRIPT) debug "Forwarding ports to minikube (ctrl-c to stop) ..."
-	@bash $(FORWARD_SCRIPT)
+	$(MAKE) util/minikube/delete && \
+	$(MAKE) util/setup && \
+	$(MAKE) run/deps
 
-.PHONY: util/k8s/context/dev
-util/k8s/context/dev: description = Set K8S context to local minikube
-util/k8s/context/dev:
+.PHONY: util/minikube/delete
+util/minikube/delete: description = Delete minikube instance
+util/minikube/delete:
 	@bash $(SHARED_SCRIPT) info "Running $@ ..."
+	minikube delete
+
+.PHONY: util/minikube/create-namespaces
+util/minikube/create-namespaces: description = Create namespaces in minikube
+util/minikube/create-namespaces: util/minikube/set-context
+	@bash $(SHARED_SCRIPT) info "Running $@ ..."
+	kubectl get namespace medplum || kubectl create namespace medplum && \
+	kubectl get namespace redis || kubectl create namespace redis && \
+	kubectl get namespace rabbitmq || kubectl create namespace rabbitmq
+
+.PHONY: util/minikube/set-context
+util/minikube/set-context: description = Set current context to minikube
+util/minikube/set-context:
 	kubectl config use-context minikube
-
-.PHONY: util/k8s/context/stg
-util/k8s/context/stg: description = Set K8S context to staging cluster
-util/k8s/context/stg:
-	@bash $(SHARED_SCRIPT) info "Running $@ ..."
-	aws eks update-kubeconfig --name staging-cluster --region $(AWS_REGION)
-
-.PHONY: util/k8s/context/prd
-util/k8s/context/prd: description = Set K8S context to production cluster
-util/k8s/context/prd:
-	@bash $(SHARED_SCRIPT) info "Running $@ ..."
-	aws eks update-kubeconfig --name production-cluster --region $(AWS_REGION)
 
 ### Events
 
