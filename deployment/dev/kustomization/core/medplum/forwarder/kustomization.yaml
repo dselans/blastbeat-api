@@ -1,0 +1,6 @@
+# This needs to be in a separate Kustomization not imported by the Medplum one because the namespace is default
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: default
+resources:
+  - forwarder.yaml

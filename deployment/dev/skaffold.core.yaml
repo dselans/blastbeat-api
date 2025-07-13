@@ -1,0 +1,81 @@
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: go-svc-template-core
+build:
+  platforms: ["linux/arm64"]
+  artifacts:
+    # Needed for shared Medplum
+    - image: medplum-postgres
+      context: "../../../fhir-json/assets/medplum"
+      docker:
+        dockerfile: Dockerfile
+manifests:
+  kustomize:
+    paths:
+      - kustomization/core
+    buildArgs: ["--enable-alpha-plugins", "--enable-exec"]
+deploy:
+  kubectl:
+    hooks:
+      before:
+        - host:
+            command:
+              - sh
+              - -c
+              - tailscale down
+        - host:
+            command:
+              - sh
+              - -c
+              - kubectl config use-context minikube && kubectl apply -k ./kustomization/core/volumes
+            dir: ./
+        - host:
+            command:
+              - sh
+              - -c
+              - ../../assets/scripts/registry-auth.sh default medplum
+            dir: ./
+portForward:
+  # Deps
+  - resourceType: deployment
+    resourceName: redis
+    namespace: redis
+    port: 6379
+    localPort: 6379
+  - resourceType: deployment
+    resourceName: rabbitmq
+    namespace: rabbitmq
+    port: 5672
+    localPort: 5672
+  # Medplum
+  - resourceType: deployment
+    resourceName: medplum-server
+    namespace: medplum
+    port: 8103
+    localPort: 8103
+  - resourceType: deployment
+    resourceName: medplum-frontend
+    namespace: medplum
+    port: 3000
+    localPort: 3030
+  - resourceType: deployment
+    resourceName: postgres
+    namespace: medplum
+    port: 5432
+    localPort: 5433
+  - resourceType: deployment
+    resourceName: redis
+    namespace: medplum
+    port: 6379
+    localPort: 6380
+  - resourceType: deployment
+    resourceName: go-medplum-forwarder
+    namespace: default
+    port: 8080
+    localPort: 9001
+  - resourceType: deployment
+    resourceName: bullboard
+    namespace: medplum
+    port: 3000
+    localPort: 8105

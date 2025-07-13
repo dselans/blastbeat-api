@@ -1,0 +1,33 @@
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: go-svc-template-server
+build:
+  platforms: ["linux/arm64"]
+  artifacts:
+    - image: go-svc-template
+      context: ../../
+      docker:
+        buildArgs:
+          TARGETARCH: "arm64"
+          TARGETOS: "linux"
+  tagPolicy:
+    gitCommit: {}
+  local:
+    useBuildkit: false
+manifests:
+  kustomize:
+    paths:
+      - kustomization/server
+    buildArgs: ["--enable-alpha-plugins", "--enable-exec"]
+# This is necessary for when this skaffold.yaml is imported elsewhere
+# Without this, it won't create a deployment
+deploy:
+  kubectl: {}
+portForward:
+  # Service
+  - resourceType: deployment
+    resourceName: go-svc-template
+    namespace: default
+    port: 8080
+    localPort: 9004
