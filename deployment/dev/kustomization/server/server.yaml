@@ -36,20 +36,20 @@ spec:
             - sh
             - -c
             - >
-              until redis-cli -h redis.redis.svc.cluster.local -a {{ .GO_AI_ACTIONPLANS_REDIS_PASSWORD }} PING;
+              until redis-cli -h redis.redis.svc.cluster.local -a {{ .GO_SVC_TEMPLATE_REDIS_PASSWORD }} PING;
               do echo "Waiting for Redis to be ready...";
               sleep 2;
               done
           env:
             - name: REDISCLI_AUTH
-              value: "{{ .GO_AI_ACTIONPLANS_REDIS_PASSWORD }}"
+              value: "{{ .GO_SVC_TEMPLATE_REDIS_PASSWORD }}"
         - name: wait-for-go-medplum-forwarder
           image: curlimages/curl:8.00.1
           command:
             [
               "sh",
               "-c",
-              "until curl -s {{ .GO_AI_ACTIONPLANS_MEDPLUM_FORWARDER_URL }}/health-check; do echo waiting for go-medplum-forwarder; sleep 2; done;",
+              "until curl -s {{ .GO_SVC_TEMPLATE_MEDPLUM_FORWARDER_URL }}/health-check; do echo waiting for go-medplum-forwarder; sleep 2; done;",
             ]
         - name: wait-for-medplum-server
           image: curlimages/curl:8.00.1
