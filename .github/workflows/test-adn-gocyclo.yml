@@ -1,0 +1,105 @@
+name: Test and Gocyclo Analysis
+
+on:
+  workflow_call:
+    inputs:
+      run-gocyclo:
+        description: 'Whether to run gocyclo analysis'
+        required: false
+        default: true
+        type: boolean
+      post-comments:
+        description: 'Whether to post comments (only works on PRs)'
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      TOKEN:
+        description: 'GitHub token for checkout and API access'
+        required: true
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: arm-2cpu-8gbmem-75gbssd
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v2.1.3
+      with:
+        go-version: '~1.22'
+
+    - uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.TOKEN }}
+
+    - name: Test
+      run: make test
+
+  gocyclo:
+    name: Run gocyclo analysis
+    runs-on: arm-2cpu-8gbmem-75gbssd
+    if: inputs.run-gocyclo
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v2.1.3
+      with:
+        go-version: '~1.22'
+
+    - uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.TOKEN }}
+
+    - name: Run gocyclo Analysis
+      id: gocyclo_analysis
+      continue-on-error: true
+      run: |
+        # Temporarily disable exit on error
+        set +e
+        
+        # Run gocyclo and capture output
+        REPORT=$(make test/gocyclo 2>&1)
+        EXIT_CODE=$?
+        
+        # Filter the output to only show complexity violations
+        CLEAN_REPORT=""
+        if [ -n "$REPORT" ]; then
+          # Extract everything from "Complexity violations found" onwards, excluding the last line
+          CLEAN_REPORT=$(echo "$REPORT" | sed -n '/Complexity violations found (>20):/,$p' | head -n -1)
+        fi
+        
+        # Always set the output, regardless of exit code
+        if [ -n "$CLEAN_REPORT" ]; then
+          echo "gocyclo_report<<EOF" >> $GITHUB_OUTPUT
+          echo "$CLEAN_REPORT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        fi
+        
+        # Re-enable exit on error
+        set -e
+        
+        # Exit with the original code (this will be ignored due to continue-on-error)
+        exit $EXIT_CODE
+
+    - name: Check gocyclo violations
+      continue-on-error: ${{ inputs.post-comments }}
+      run: make test/gocyclo
+
+    - name: Create a comment with the results
+      if: ${{ inputs.post-comments && steps.gocyclo_analysis.outputs.gocyclo_report != '' }}
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        recreate: true
+        header: gocyclo Report
+        message: |
+          **Cyclomatic Complexity (threshold > 20)**
+
+          ```
+          ${{ steps.gocyclo_analysis.outputs.gocyclo_report }}
+          ```
+
+    - name: Fail if gocyclo violations found
+      if: ${{ inputs.post-comments && steps.gocyclo_analysis.outputs.gocyclo_report != '' }}
+      run: |
+        echo "Gocyclo complexity violations found:"
+        echo "${{ steps.gocyclo_analysis.outputs.gocyclo_report }}"
+        exit 1

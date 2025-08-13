@@ -2,8 +2,8 @@
 #
 # This workflow will:
 #
-# 1. Build server
-# 2. Run tests
+# 1. Run tests and gocyclo analysis
+# 2. Build server
 # 3. Build and push Docker image tagged with "${shortCommitSHA}-prd" to AWS ECR
 #
 # Once the image is pushed, it will show up when running `make deploy/*/prd`.
@@ -15,7 +15,16 @@ on:
 name: go-svc-template - Production
 
 jobs:
+  test-and-gocyclo:
+    uses: ./.github/workflows/test-and-gocyclo.yml
+    secrets:
+      TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    with:
+      run-gocyclo: true
+      post-comments: false
+
   build:
+    needs: test-and-gocyclo
     runs-on: arm-2cpu-8gbmem-75gbssd
     steps:
       - uses: actions/checkout@main
