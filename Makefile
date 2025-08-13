@@ -311,19 +311,31 @@ events/read: events/protoset
     --binding-key \# \
     --decode-type protobuf
 
-# TODO: Uncomment this when we have a medplum webhook event to write
-# .PHONY: events/write/medplum-webhook-diagnostic-report
-# events/write/medplum-webhook-diagnostic-report: description = Emit user-updated event on bus in minikube
-# events/write/medplum-webhook-diagnostic-report: events/protoset
-# 	@bash $(SHARED_SCRIPT) debug "Writing medplum.Webhook DiagnosticReport event to bus ..."
-# 	plumber write rabbit \
-#     --protobuf-descriptor-set ./assets/events/events.protoset \
-#     --protobuf-root-message common.Event \
-#     --address $(PLUMBER_RABBITMQ_URL) \
-#     --exchange-name events \
-#     --routing-key medplum.Webhook \
-#     --encode-type jsonpb \
-#     --input-file ./assets/events/medplum-webhook-diagnostic-report.json
+.PHONY: events/write/user-updated
+events/write/user-updated: description = Emit user-updated event on bus in minikube
+events/write/user-updated: events/protoset
+	@bash $(SHARED_SCRIPT) debug "Writing user-updated event to bus ..."
+	plumber write rabbit \
+    --protobuf-descriptor-set ./assets/events/events.protoset \
+    --protobuf-root-message common.Event \
+    --address $(PLUMBER_RABBITMQ_URL) \
+    --exchange-name events \
+    --routing-key user.updated \
+    --encode-type jsonpb \
+    --input-file ./assets/events/user-updated.json
+
+.PHONY: events/write/medplum-webhook-diagnostic-report
+events/write/medplum-webhook-diagnostic-report: description = Emit user-updated event on bus in minikube
+events/write/medplum-webhook-diagnostic-report: events/protoset
+	@bash $(SHARED_SCRIPT) debug "Writing medplum.Webhook DiagnosticReport event to bus ..."
+	plumber write rabbit \
+    --protobuf-descriptor-set ./assets/events/events.protoset \
+    --protobuf-root-message common.Event \
+    --address $(PLUMBER_RABBITMQ_URL) \
+    --exchange-name events \
+    --routing-key medplum.Webhook \
+    --encode-type jsonpb \
+    --input-file ./assets/events/medplum-webhook-diagnostic-report.json
 
 .PHONY: events/protoset
 events/protoset: description = Sync events.protoset with events version specified in go.mod
