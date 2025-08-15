@@ -240,7 +240,13 @@ func (run *appRun) LoggingConfig() (config loggingConfig) {
 	config.maxLogEvents = run.MaxLogEvents()
 	config.collectMetrics = logging.Enabled && logging.Metrics.Enabled
 	config.localEnrichment = logging.Enabled && logging.LocalDecorating.Enabled
-
+	if run.Config.Labels != nil && logging.Forwarding.Enabled && logging.Forwarding.Labels.Enabled {
+		config.includeLabels = run.Config.Labels
+		config.excludeLabels = &logging.Forwarding.Labels.Exclude
+	}
+	if run.Config.CustomInsightsEvents.CustomAttributesValues != nil && logging.Forwarding.Enabled && run.Config.CustomInsightsEvents.CustomAttributesEnabled {
+		config.customAttributes = run.Config.CustomInsightsEvents.CustomAttributesValues
+	}
 	return config
 }
 

@@ -67,6 +67,11 @@ type Config struct {
 	//
 	// https://docs.newrelic.com/docs/insights/new-relic-insights/adding-querying-data/inserting-custom-events-new-relic-apm-agents
 	CustomInsightsEvents struct {
+		// CustomAttributesEnabled Toggles whether we send our custom attributes with forwarded logs.
+		CustomAttributesEnabled bool
+		// CustomAttributes A hash with key/value pairs to add as custom attributes to all log events forwarded to New Relic.
+		// https://docs.newrelic.com/docs/TODO
+		CustomAttributesValues map[string]string
 		// Enabled controls whether RecordCustomEvent will collect
 		// custom analytics events.  High security mode overrides this
 		// setting.
@@ -572,6 +577,12 @@ type ApplicationLogging struct {
 		// Controls the overall memory consumption when using log forwarding.
 		// SHOULD be sent as part of the harvest_limits on Connect.
 		MaxSamplesStored int
+		Labels           struct {
+			// Toggles whether we send our labels with forwarded logs.
+			Enabled bool
+			// List of label types to exclude from forwarded logs.
+			Exclude []string
+		}
 	}
 	Metrics struct {
 		// Toggles whether the agent gathers the the user facing Logging/lines and Logging/lines/{SEVERITY}
@@ -625,6 +636,8 @@ func defaultConfig() Config {
 
 	c.Enabled = true
 	c.Labels = make(map[string]string)
+	c.CustomInsightsEvents.CustomAttributesEnabled = false
+	c.CustomInsightsEvents.CustomAttributesValues = make(map[string]string)
 	c.CustomInsightsEvents.Enabled = true
 	c.CustomInsightsEvents.MaxSamplesStored = internal.MaxCustomEvents
 	c.TransactionEvents.Enabled = true
@@ -661,6 +674,8 @@ func defaultConfig() Config {
 	c.ApplicationLogging.Enabled = true
 	c.ApplicationLogging.Forwarding.Enabled = true
 	c.ApplicationLogging.Forwarding.MaxSamplesStored = internal.MaxLogEvents
+	c.ApplicationLogging.Forwarding.Labels.Enabled = false
+	c.ApplicationLogging.Forwarding.Labels.Exclude = nil
 	c.ApplicationLogging.Metrics.Enabled = true
 	c.ApplicationLogging.LocalDecorating.Enabled = false
 	c.ApplicationLogging.ZapLogger.AttributesFrontloaded = true
@@ -817,6 +832,12 @@ func copyConfigReferenceFields(cfg Config) Config {
 		cp.Labels = make(map[string]string, len(cfg.Labels))
 		for key, val := range cfg.Labels {
 			cp.Labels[key] = val
+		}
+	}
+	if cfg.CustomInsightsEvents.CustomAttributesValues != nil {
+		cp.CustomInsightsEvents.CustomAttributesValues = make(map[string]string, len(cfg.CustomInsightsEvents.CustomAttributesValues))
+		for key, val := range cfg.CustomInsightsEvents.CustomAttributesValues {
+			cp.CustomInsightsEvents.CustomAttributesValues[key] = val
 		}
 	}
 	if cfg.ErrorCollector.IgnoreStatusCodes != nil {

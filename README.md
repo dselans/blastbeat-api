@@ -11,7 +11,7 @@ _Last updated: 07/25/2024_
 
 * **07/08/2025**
     * Updated `events` to `v0.1.2`
-    * Updated `go-lib-common` to `v0.0.17`
+    * Updated `go-common-lib` to `v0.0.17`
 
 * **10/04/2024**
     * Sync'd latest changes from `go-kustomer-events`

@@ -12,9 +12,9 @@ import (
 	"github.com/streamdal/rabbit"
 	"go.uber.org/zap"
 
-	"github.com/superpowerdotcom/go-lib-common/clog"
-	"github.com/your_org/go-svc-template/config"
-	"github.com/your_org/go-svc-template/services/state"
+	"github.com/superpowerdotcom/go-common-lib/clog"
+	"github.com/superpowerdotcom/go-svc-template/config"
+	"github.com/superpowerdotcom/go-svc-template/services/state"
 )
 
 const (

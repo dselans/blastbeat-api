@@ -12,11 +12,9 @@ import (
 	"github.com/bsm/redislock"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
-	"github.com/superpowerdotcom/events/build/proto/go/common"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/proto"
 
-	"github.com/superpowerdotcom/go-lib-common/clog"
+	"github.com/superpowerdotcom/go-common-lib/clog"
 )
 
 var (
@@ -40,6 +38,10 @@ type IState interface {
 	// additional prefixes that will be appended to the pre-configured prefix.
 	Set(ctx context.Context, key, value string, prefix ...string) error
 
+	// SetWithTTL will set a key with a specified TTL; takes optional, additional
+	// prefixes that will be appended to the pre-configured prefix.
+	SetWithTTL(ctx context.Context, key, value string, ttl time.Duration, prefix ...string) error
+
 	// Delete will remove the key from the store; takes optional, additional
 	// prefixes that will be appended to the pre-configured prefix.
 	Delete(ctx context.Context, key string, prefix ...string) error
@@ -51,10 +53,10 @@ type IState interface {
 	// Obtain will obtain a new redis lock with the given key, tll and options
 	// to facilitate distributed lock functionality.
 	//
-	// >> It is the responsibility of the caller to manage the lock lifetime. <<
+	// >> It is the responsibility of the caller to manage the lock lifetime.
 	//
 	// https://pkg.go.dev/github.com/bsm/redislock
-	Obtain(ctx context.Context, key string, ttl time.Duration, opt *redislock.Options) (*redislock.Lock, error)
+	Obtain(ctx context.Context, key string, ttl time.Duration, opt *redislock.Options, prefix ...string) (*redislock.Lock, error)
 }
 
 type State struct {
@@ -109,7 +111,7 @@ func validateOptions(opts *Options) error {
 }
 
 func (s *State) Get(ctx context.Context, key string, prefix ...string) (string, error) {
-	key, err := s.buildKey(key, prefix)
+	key, err := s.buildKey(key, prefix...)
 	if err != nil {
 		return "", errors.Wrap(err, "unable to build key")
 	}
@@ -132,16 +134,19 @@ func (s *State) Get(ctx context.Context, key string, prefix ...string) (string, 
 }
 
 func (s *State) Add(ctx context.Context, key, value string, prefix ...string) error {
-	// TODO: Verify what redis returns if key already exists
-	return s.set(ctx, key, value, true, prefix...)
+	return s.set(ctx, key, value, true, 0, prefix...)
 }
 
 func (s *State) Set(ctx context.Context, key, value string, prefix ...string) error {
-	return s.set(ctx, key, value, false, prefix...)
+	return s.set(ctx, key, value, false, 0, prefix...)
+}
+
+func (s *State) SetWithTTL(ctx context.Context, key, value string, ttl time.Duration, prefix ...string) error {
+	return s.set(ctx, key, value, false, ttl, prefix...)
 }
 
 func (s *State) Delete(ctx context.Context, key string, prefix ...string) error {
-	key, err := s.buildKey(key, prefix)
+	key, err := s.buildKey(key, prefix...)
 	if err != nil {
 		return errors.Wrap(err, "unable to build key")
 	}
@@ -158,7 +163,7 @@ func (s *State) Delete(ctx context.Context, key string, prefix ...string) error 
 }
 
 func (s *State) Exists(ctx context.Context, key string, prefix ...string) (bool, error) {
-	key, err := s.buildKey(key, prefix)
+	key, err := s.buildKey(key, prefix...)
 	if err != nil {
 		return false, errors.Wrap(err, "unable to build key")
 	}
@@ -175,44 +180,17 @@ func (s *State) Exists(ctx context.Context, key string, prefix ...string) (bool,
 	return exists > 0, nil
 }
 
-func (s *State) Obtain(ctx context.Context, key string, ttl time.Duration, opt *redislock.Options) (*redislock.Lock, error) {
+func (s *State) Obtain(ctx context.Context, key string, ttl time.Duration, opt *redislock.Options, prefix ...string) (*redislock.Lock, error) {
+	key, err := s.buildKey(key, prefix...)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to build key")
+	}
+
 	return s.opts.RedisLock.Obtain(ctx, key, ttl, opt)
 }
 
-func (s *State) setEvent(ctx context.Context, key string, value *common.Event, nx bool, prefix ...string) error {
-	key, err := s.buildKey(key, prefix)
-	if err != nil {
-		return errors.Wrap(err, "unable to build key")
-	}
-
-	if value == nil {
-		return ErrNilValue
-	}
-
-	bytes, err := proto.Marshal(value)
-	if err != nil {
-		return errors.Wrap(err, "unable to marshal event")
-	}
-
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	if nx {
-		_, err = s.opts.RedisClient.SetNX(ctx, key, bytes, 0).Result()
-	} else {
-		_, err = s.opts.RedisClient.Set(ctx, key, bytes, 0).Result()
-	}
-
-	if err != nil {
-		return errors.Wrap(err, "unable to set key")
-	}
-
-	return nil
-}
-
-func (s *State) set(ctx context.Context, key, value string, nx bool, prefix ...string) error {
-	key, err := s.buildKey(key, prefix)
+func (s *State) set(ctx context.Context, key, value string, nx bool, ttl time.Duration, prefix ...string) error {
+	key, err := s.buildKey(key, prefix...)
 	if err != nil {
 		return errors.Wrap(err, "unable to build key")
 	}
@@ -222,9 +200,9 @@ func (s *State) set(ctx context.Context, key, value string, nx bool, prefix ...s
 	}
 
 	if nx {
-		err = s.opts.RedisClient.SetNX(ctx, key, value, 0).Err()
+		err = s.opts.RedisClient.SetNX(ctx, key, value, ttl).Err()
 	} else {
-		err = s.opts.RedisClient.Set(ctx, key, value, 0).Err()
+		err = s.opts.RedisClient.Set(ctx, key, value, ttl).Err()
 	}
 
 	if err != nil {
@@ -234,7 +212,7 @@ func (s *State) set(ctx context.Context, key, value string, nx bool, prefix ...s
 	return nil
 }
 
-func (s *State) buildKey(inputKey string, inputPrefix []string) (string, error) {
+func (s *State) buildKey(inputKey string, inputPrefix ...string) (string, error) {
 	prefix := s.opts.Prefix
 
 	// If we have additional prefixes, append them to the pre-configured prefix

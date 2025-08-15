@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/superpowerdotcom/events/build/proto/go/common"
-	"github.com/superpowerdotcom/go-lib-common/util"
-	rvalidate "github.com/superpowerdotcom/go-lib-common/validate"
+	"github.com/superpowerdotcom/go-common-lib/util"
+	rvalidate "github.com/superpowerdotcom/go-common-lib/validate"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +23,7 @@ import (
 
 	2) For medplum-related helpers - use github.com/superpowerdotcom/go-medplum-lib
 
-	3) For common helper funcs, validation - use github.com/superpowerdotcom/go-lib-common
+	3) For common helper funcs, validation - use github.com/superpowerdotcom/go-common-lib
 
 	4) Ensure you use `jsonformat` library for marshalling/unmarshalling FHIR.
 	   If you use another proto json lib, you will generate invalid FHIR JSON!
