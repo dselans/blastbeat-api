@@ -146,6 +146,8 @@ Read [here](https://www.notion.so/superpowerhealth/Deployment-Philosophy-6dc50c8
    1. `go-svc-template` -> lower case, dash separated service name
    2. `GO_SVC_TEMPLATE` -> upper case, underscore separated service name (for ENV vars)
    3. `your_org` -> your Github org name
+   4. `NEW_RELIC_APP_ID_PRD` -> Replace empty value with actual New Relic app id
+   5. `NEW_RELIC_APP_ID_STG` -> Replace empty value with actual New Relic app id
     ```bash
     find . -maxdepth 3 -type f -exec sed -i "" 's/go-svc-template/service-name/g' {} \;
     find . -maxdepth 3 -type f -exec sed -i "" 's/GO_SVC_TEMPLATE/SERVICE_NAME/g' {} \;
