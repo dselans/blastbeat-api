@@ -29,7 +29,7 @@ DEPLOY_CONFIG ?= deploy.dev.yml
 PLUMBER_QUEUE_NAME ?= plumber-$(shell date | sha256sum | cut -b 1-6)
 PLUMBER_RABBITMQ_URL ?= amqp://localhost
 
-# Add the APP_IDs in once they set it up inside New Relic
+# TODO: Add the APP_IDs in once they set it up inside New Relic
 NEW_RELIC_APP_ID_PRD=
 NEW_RELIC_APP_ID_PRD=
 
