@@ -29,6 +29,10 @@ DEPLOY_CONFIG ?= deploy.dev.yml
 PLUMBER_QUEUE_NAME ?= plumber-$(shell date | sha256sum | cut -b 1-6)
 PLUMBER_RABBITMQ_URL ?= amqp://localhost
 
+# TODO: Add the APP_IDs in once they set it up inside New Relic
+NEW_RELIC_APP_ID_PRD=
+NEW_RELIC_APP_ID_PRD=
+
 GO = CGO_ENABLED=$(CGO_ENABLED) GOFLAGS=-mod=vendor go
 CGO_ENABLED ?= 0
 GO_BUILD_FLAGS = -ldflags "-X main.version=${VERSION}"
@@ -39,6 +43,20 @@ check_defined = \
 		$(call __check_defined,$1,$(strip $(value 2)))))
 __check_defined = $(if $(value $1),, \
 	$(error undefined '$1' variable: $2))
+
+define deploy_marker
+	NEW_RELIC_USER_API_KEY=$$(doppler secrets -p shared -c prd get NEW_RELIC_USER_API_KEY --plain) || { echo "❌ Failed to fetch NEW_RELIC_USER_API_KEY"; exit 1; }; \
+	export NEW_RELIC_USER_API_KEY; \
+	curl -s -X POST https://api.newrelic.com/v2/applications/$(1)/deployments.json \
+		-H "X-Api-Key:$$NEW_RELIC_USER_API_KEY" \
+		-H "Content-Type: application/json" \
+		-d '{ \
+			"deployment": { \
+				"revision": "$(2)", \
+				"user": "$(3)" \
+			} \
+		}'
+endef
 
 # Pattern #1 example: "example : description = Description for example target"
 # Pattern #2 example: "### Example separator text
@@ -136,6 +154,7 @@ deploy/stg: prereq
 	DEPLOY_CONFIG=deployment/deploy.stg.yml \
 	KSP_SERVICE=go-svc-template \
 	python3 $(DEPLOY_SCRIPT) -r go-svc-template -t deploy/hidden
+	$(call deploy_marker,$(NEW_RELIC_APP_ID_STG),$(VERSION),$(USER))
 
 .PHONY: deploy/prd
 deploy/prd: description = Deploy go-svc-template to production (PRD)
@@ -147,6 +166,7 @@ deploy/prd: prereq check-doppler-secrets
 	DEPLOY_CONFIG=deployment/deploy.prd.yml \
 	KSP_SERVICE=go-svc-template \
 	python3 $(DEPLOY_SCRIPT) -r go-svc-template -t deploy/hidden -f prd
+	$(call deploy_marker,$(NEW_RELIC_APP_ID_PRD),$(VERSION),$(USER))
 
 ### Test
 
