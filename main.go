@@ -11,9 +11,9 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/your_org/go-svc-template/api"
-	"github.com/your_org/go-svc-template/config"
-	"github.com/your_org/go-svc-template/deps"
+	"github.com/superpowerdotcom/go-svc-template/api"
+	"github.com/superpowerdotcom/go-svc-template/config"
+	"github.com/superpowerdotcom/go-svc-template/deps"
 )
 
 const (

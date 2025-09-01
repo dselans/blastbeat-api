@@ -7,8 +7,8 @@ import (
 	"github.com/newrelic/go-agent/v3/newrelic"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/superpowerdotcom/events/build/proto/go/common"
-	"github.com/superpowerdotcom/go-lib-common/util"
-	"github.com/superpowerdotcom/go-lib-common/validate"
+	"github.com/superpowerdotcom/go-common-lib/util"
+	"github.com/superpowerdotcom/go-common-lib/validate"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )

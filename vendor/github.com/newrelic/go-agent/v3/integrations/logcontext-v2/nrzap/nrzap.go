@@ -15,8 +15,9 @@ func init() { internal.TrackUsage("integration", "logcontext-v2", "zap") }
 
 // NewRelicZapCore implements zap.Core
 type NewRelicZapCore struct {
-	core zapcore.Core
-	nr   newrelicApplicationState
+	fields []zap.Field
+	core   zapcore.Core
+	nr     newrelicApplicationState
 }
 
 // newrelicApplicationState is a private struct that stores newrelic application data
@@ -123,6 +124,11 @@ var (
 // Errors will be returned if the zapcore object is nil, or if the application is nil. It is up to the user to decide
 // how to handle the case where the newrelic.Application is nil.
 // In the case that the newrelic.Application is nil, a valid NewRelicZapCore object will still be returned.
+//
+// Please note that, while enriched context is added to log data forwarded to New Relic telemetry,
+// it is not added to the local log data itself. This is due to the specific way zap logs are
+// efficiently integrated into the New Relic agent logs in context. Local log decoration for zap
+// logs requires additional custom code.
 func WrapBackgroundCore(core zapcore.Core, app *newrelic.Application) (*NewRelicZapCore, error) {
 	if core == nil {
 		return nil, ErrNilZapcore
@@ -147,7 +153,12 @@ func WrapBackgroundCore(core zapcore.Core, app *newrelic.Application) (*NewRelic
 // Errors will be returned if the zapcore object is nil, or if the application is nil. It is up to the user to decide
 // how to handle the case where the newrelic.Transaction is nil.
 // In the case that the newrelic.Application is nil, a valid NewRelicZapCore object will still be returned.
-func WrapTransactionCore(core zapcore.Core, txn *newrelic.Transaction) (*NewRelicZapCore, error) {
+//
+// Please note that, while enriched context is added to log data forwarded to New Relic telemetry,
+// it is not added to the local log data itself. This is due to the specific way zap logs are
+// efficiently integrated into the New Relic agent logs in context. Local log decoration for zap
+// logs requires additional custom code.
+func WrapTransactionCore(core zapcore.Core, txn *newrelic.Transaction) (zapcore.Core, error) {
 	if core == nil {
 		return nil, ErrNilZapcore
 	}
@@ -167,9 +178,10 @@ func WrapTransactionCore(core zapcore.Core, txn *newrelic.Transaction) (*NewReli
 // With makes a copy of a NewRelicZapCore with new zap.Fields. It calls zapcore.With() on the zap core object
 // then makes a deepcopy of the NewRelicApplicationState object so the original
 // object can be deallocated when it's no longer in scope.
-func (c NewRelicZapCore) With(fields []zap.Field) zapcore.Core {
-	return NewRelicZapCore{
-		core: c.core.With(fields),
+func (c *NewRelicZapCore) With(fields []zap.Field) zapcore.Core {
+	return &NewRelicZapCore{
+		core:   c.core.With(fields),
+		fields: append(fields, c.fields...),
 		nr: newrelicApplicationState{
 			c.nr.app,
 			c.nr.txn,
@@ -178,24 +190,25 @@ func (c NewRelicZapCore) With(fields []zap.Field) zapcore.Core {
 }
 
 // Check simply calls zapcore.Check on the Core object.
-func (c NewRelicZapCore) Check(entry zapcore.Entry, checkedEntry *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+func (c *NewRelicZapCore) Check(entry zapcore.Entry, checkedEntry *zapcore.CheckedEntry) *zapcore.CheckedEntry {
 	ce := c.core.Check(entry, checkedEntry)
 	ce.AddCore(entry, c)
 	return ce
 }
 
 // Write wraps zapcore.Write and captures the log entry and sends that data to New Relic.
-func (c NewRelicZapCore) Write(entry zapcore.Entry, fields []zap.Field) error {
-	c.nr.recordLog(entry, fields)
+func (c *NewRelicZapCore) Write(entry zapcore.Entry, fields []zap.Field) error {
+	allFields := append(fields, c.fields...)
+	c.nr.recordLog(entry, allFields)
 	return nil
 }
 
 // Sync simply calls zapcore.Sync on the Core object.
-func (c NewRelicZapCore) Sync() error {
+func (c *NewRelicZapCore) Sync() error {
 	return c.core.Sync()
 }
 
 // Enabled simply calls zapcore.Enabled on the zapcore.Level passed to it.
-func (c NewRelicZapCore) Enabled(level zapcore.Level) bool {
+func (c *NewRelicZapCore) Enabled(level zapcore.Level) bool {
 	return c.core.Enabled(level)
 }

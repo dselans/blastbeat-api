@@ -29,7 +29,7 @@ import (
 	"github.com/superpowerdotcom/events/build/proto/go/user"
 	"go.uber.org/zap"
 
-	"github.com/superpowerdotcom/go-lib-common/clog"
+	"github.com/superpowerdotcom/go-common-lib/clog"
 )
 
 const (

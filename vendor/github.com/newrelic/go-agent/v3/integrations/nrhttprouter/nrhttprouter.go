@@ -74,6 +74,9 @@ func (r *Router) handle(method string, path string, original httprouter.Handle) 
 	if nil != r.application {
 		handle = func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 			txn := r.application.StartTransaction(txnName(method, path))
+			if newrelic.IsSecurityAgentPresent() {
+				txn.SetCsecAttributes(newrelic.AttributeCsecRoute, path)
+			}
 			txn.SetWebRequestHTTP(req)
 			w = txn.SetWebResponse(w)
 			defer txn.End()
@@ -142,6 +145,7 @@ func (r *Router) HandlerFunc(method, path string, handler http.HandlerFunc) {
 
 // ServeHTTP replaces httprouter.Router.ServeHTTP.
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	traceID := ""
 	if nil != r.application {
 		h, _, _ := r.Router.Lookup(req.Method, req.URL.Path)
 		if nil == h {
@@ -152,8 +156,12 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 			txn.SetWebRequestHTTP(req)
 			w = txn.SetWebResponse(w)
+			traceID = txn.GetLinkingMetadata().TraceID
 		}
 	}
 
 	r.Router.ServeHTTP(w, req)
+	if newrelic.IsSecurityAgentPresent() {
+		newrelic.GetSecurityAgentInterface().SendEvent("RESPONSE_HEADER", w.Header(), traceID)
+	}
 }
