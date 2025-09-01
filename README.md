@@ -149,7 +149,6 @@ Read [here](https://www.notion.so/superpowerhealth/Deployment-Philosophy-6dc50c8
     ```bash
     find . -maxdepth 3 -type f -exec sed -i "" 's/go-svc-template/service-name/g' {} \;
     find . -maxdepth 3 -type f -exec sed -i "" 's/GO_SVC_TEMPLATE/SERVICE_NAME/g' {} \;
-    find . -maxdepth 3 -type f -exec sed -i "" 's/your_org/your-org-name/g' {} \;
     mv .github.rename .github
    ```
 
