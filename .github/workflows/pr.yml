@@ -2,17 +2,14 @@ name: go-svc-template - Pull Request
 
 on: pull_request
 
+permissions:
+  pull-requests: write
+
 jobs:
-  test:
-    name: Run tests
-    runs-on: arm-2cpu-8gbmem-75gbssd
-    steps:
-    - name: Set up Go
-      uses: actions/setup-go@v2.1.3
-      with:
-        go-version: '~1.22'
-
-    - uses: actions/checkout@v2
-
-    - name: Test
-      run: make test
+  test-and-gocyclo:
+    uses: ./.github/workflows/test-and-gocyclo.yml
+    secrets:
+      TOKEN: ${{ secrets.CI_PAT_TOKEN_READONLY }}
+    with:
+      run-gocyclo: true
+      post-comments: true
