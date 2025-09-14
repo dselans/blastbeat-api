@@ -21,6 +21,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/superpowerdotcom/go-common-lib/clog"
+
 	sb "github.com/superpowerdotcom/go-svc-template/backends/state"
 	"github.com/superpowerdotcom/go-svc-template/config"
 	"github.com/superpowerdotcom/go-svc-template/services/processor"
@@ -38,6 +39,7 @@ type Dependencies struct {
 	// Backends
 	ProcessorRabbitBackend rabbit.IRabbit
 	PublisherRabbitBackend rabbit.IRabbit
+	ReplayerRabbitBackend  rabbit.IRabbit
 	RedisBackend           *redis.Client
 	RedisLockBackend       *redislock.Client
 	StateBackend           sb.IState
@@ -245,12 +247,12 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 
 	d.StateBackend = s
 
-	llog.Debug("Setting up rabbit backend")
+	llog.Debug("Setting up rabbit backend for processor")
 
 	// RabbitMQ backend for processing messages
 	procRabbitBackend, err := rabbit.New(&rabbit.Options{
 		URLs:      cfg.ProcessorRabbitURL,
-		Mode:      1,
+		Mode:      rabbit.Consumer,
 		QueueName: cfg.ProcessorRabbitQueueName,
 		Bindings: []rabbit.Binding{
 			{
@@ -282,6 +284,8 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 
 	d.ProcessorRabbitBackend = procRabbitBackend
 
+	llog.Debug("Setting up rabbit backend for publisher")
+
 	// RabbitMQ backend for publishing
 	pubRabbitBackend, err := rabbit.New(&rabbit.Options{
 		URLs: cfg.PublisherRabbitURL,
@@ -310,6 +314,43 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	}
 
 	d.PublisherRabbitBackend = pubRabbitBackend
+
+	llog.Debug("Setting up rabbit backend for replayer")
+
+	// RabbitMQ backend for replayer
+	replayerRabbitBackend, err := rabbit.New(&rabbit.Options{
+		URLs:      cfg.ProcessorRabbitURL,
+		Mode:      rabbit.Consumer,
+		QueueName: cfg.ProcessorRabbitQueueName + "-replay",
+		Bindings: []rabbit.Binding{
+			{
+				ExchangeName:    cfg.ProcessorRabbitExchangeName + "-replay-" + cfg.ServiceName,
+				ExchangeType:    cfg.ProcessorRabbitExchangeType,
+				ExchangeDeclare: cfg.ProcessorRabbitExchangeDeclare,
+				ExchangeDurable: cfg.ProcessorRabbitExchangeDurable,
+				BindingKeys:     cfg.ProcessorRabbitBindingKeys,
+			},
+		},
+		RetryReconnectSec: rabbit.DefaultRetryReconnectSec,
+		QueueDurable:      cfg.ProcessorRabbitQueueDurable,
+		QueueExclusive:    cfg.ProcessorRabbitQueueExclusive,
+		QueueAutoDelete:   cfg.ProcessorRabbitQueueAutoDelete,
+		QueueDeclare:      cfg.ProcessorRabbitQueueDeclare,
+		AutoAck:           cfg.ProcessorRabbitAutoAck,
+		ConsumerTag:       cfg.ServiceName + "-replayer",
+		UseTLS:            cfg.ProcessorRabbitUseTLS,
+		SkipVerifyTLS:     cfg.ProcessorRabbitSkipVerifyTLS,
+		Log: d.ZapLog.Sugar().With(
+			zap.String("env", cfg.EnvName),
+			zap.String("pkg", "rabbit"),
+			zap.String("backend", "replayer"),
+		),
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to create rabbit backend for replayer")
+	}
+
+	d.ReplayerRabbitBackend = replayerRabbitBackend
 
 	return nil
 }
