@@ -27,8 +27,8 @@ ARG TARGETOS
 RUN apk --update add bash curl ca-certificates && update-ca-certificates
 
 # Copy bin & WASM
-COPY --from=builder /build/go-svc-template-$TARGETOS-$TARGETARCH /go-svc-template
+COPY --from=builder /build/blastbeat-api-$TARGETOS-$TARGETARCH /blastbeat-api
 
-RUN chmod +x /go-svc-template
+RUN chmod +x /blastbeat-api
 
-CMD ["/go-svc-template"]
+CMD ["/blastbeat-api"]

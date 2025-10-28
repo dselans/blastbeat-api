@@ -16,17 +16,14 @@ import (
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
-	"github.com/streamdal/rabbit"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/superpowerdotcom/go-common-lib/clog"
 
-	sb "github.com/superpowerdotcom/go-svc-template/backends/state"
-	"github.com/superpowerdotcom/go-svc-template/config"
-	"github.com/superpowerdotcom/go-svc-template/services/processor"
-	"github.com/superpowerdotcom/go-svc-template/services/publisher"
-	ss "github.com/superpowerdotcom/go-svc-template/services/state"
+	sb "github.com/dselans/blastbeat-api/backends/state"
+	"github.com/dselans/blastbeat-api/config"
+	ss "github.com/dselans/blastbeat-api/services/state"
 )
 
 const (
@@ -37,17 +34,12 @@ type customCheck struct{}
 
 type Dependencies struct {
 	// Backends
-	ProcessorRabbitBackend rabbit.IRabbit
-	PublisherRabbitBackend rabbit.IRabbit
-	ReplayerRabbitBackend  rabbit.IRabbit
-	RedisBackend           *redis.Client
-	RedisLockBackend       *redislock.Client
-	StateBackend           sb.IState
+	RedisBackend     *redis.Client
+	RedisLockBackend *redislock.Client
+	StateBackend     sb.IState
 
 	// Services
-	ProcessorService processor.IProcessor
-	PublisherService publisher.IPublisher
-	StateService     ss.IState
+	StateService ss.IState
 
 	Health health.IHealth
 
@@ -57,11 +49,6 @@ type Dependencies struct {
 
 	// ShutdownCancel is the cancel function for the global shutdown context
 	ShutdownCancel context.CancelFunc
-
-	// Channel written to by publisher when it's done shutting down; read by
-	// shutdown handler in main(). We need this so that we can tell the shutdown
-	// handler when it is safe to exit.
-	PublisherShutdownDoneCh chan struct{}
 
 	NewRelicApp *newrelic.Application
 	Config      *config.Config
@@ -80,10 +67,9 @@ func New(cfg *config.Config) (*Dependencies, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	d := &Dependencies{
-		ShutdownCtx:             ctx,
-		ShutdownCancel:          cancel,
-		PublisherShutdownDoneCh: make(chan struct{}),
-		Config:                  cfg,
+		ShutdownCtx:    ctx,
+		ShutdownCancel: cancel,
+		Config:         cfg,
 	}
 
 	// NewRelic setup must occur before logging setup
@@ -247,111 +233,6 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 
 	d.StateBackend = s
 
-	llog.Debug("Setting up rabbit backend for processor")
-
-	// RabbitMQ backend for processing messages
-	procRabbitBackend, err := rabbit.New(&rabbit.Options{
-		URLs:      cfg.ProcessorRabbitURL,
-		Mode:      rabbit.Consumer,
-		QueueName: cfg.ProcessorRabbitQueueName,
-		Bindings: []rabbit.Binding{
-			{
-				ExchangeName:    cfg.ProcessorRabbitExchangeName,
-				ExchangeType:    cfg.ProcessorRabbitExchangeType,
-				ExchangeDeclare: cfg.ProcessorRabbitExchangeDeclare,
-				ExchangeDurable: cfg.ProcessorRabbitExchangeDurable,
-				BindingKeys:     cfg.ProcessorRabbitBindingKeys,
-			},
-		},
-		RetryReconnectSec: rabbit.DefaultRetryReconnectSec,
-		QueueDurable:      cfg.ProcessorRabbitQueueDurable,
-		QueueExclusive:    cfg.ProcessorRabbitQueueExclusive,
-		QueueAutoDelete:   cfg.ProcessorRabbitQueueAutoDelete,
-		QueueDeclare:      cfg.ProcessorRabbitQueueDeclare,
-		AutoAck:           cfg.ProcessorRabbitAutoAck,
-		ConsumerTag:       cfg.ServiceName + "-processor",
-		UseTLS:            cfg.ProcessorRabbitUseTLS,
-		SkipVerifyTLS:     cfg.ProcessorRabbitSkipVerifyTLS,
-		Log: d.ZapLog.Sugar().With(
-			zap.String("env", cfg.EnvName),
-			zap.String("pkg", "rabbit"),
-			zap.String("backend", "processor"),
-		),
-	})
-	if err != nil {
-		return errors.Wrap(err, "unable to create rabbit backend for processor")
-	}
-
-	d.ProcessorRabbitBackend = procRabbitBackend
-
-	llog.Debug("Setting up rabbit backend for publisher")
-
-	// RabbitMQ backend for publishing
-	pubRabbitBackend, err := rabbit.New(&rabbit.Options{
-		URLs: cfg.PublisherRabbitURL,
-		Bindings: []rabbit.Binding{
-			{
-				ExchangeName:       cfg.PublisherRabbitExchangeName,
-				ExchangeType:       cfg.PublisherRabbitExchangeType,
-				ExchangeDeclare:    cfg.PublisherRabbitExchangeDeclare,
-				ExchangeDurable:    cfg.PublisherRabbitExchangeDurable,
-				ExchangeAutoDelete: cfg.PublisherRabbitExchangeAutoDelete,
-			},
-		},
-		Mode:              rabbit.Producer,
-		RetryReconnectSec: rabbit.DefaultRetryReconnectSec,
-		AppID:             cfg.ServiceName + "-publisher",
-		UseTLS:            cfg.PublisherRabbitUseTLS,
-		SkipVerifyTLS:     cfg.PublisherRabbitSkipVerifyTLS,
-		Log: d.ZapLog.Sugar().With(
-			zap.String("env", cfg.EnvName),
-			zap.String("pkg", "rabbit"),
-			zap.String("backend", "rabbit-publisher"),
-		),
-	})
-	if err != nil {
-		return errors.Wrap(err, "unable to create rabbit backend for publisher")
-	}
-
-	d.PublisherRabbitBackend = pubRabbitBackend
-
-	llog.Debug("Setting up rabbit backend for replayer")
-
-	// RabbitMQ backend for replayer
-	replayerRabbitBackend, err := rabbit.New(&rabbit.Options{
-		URLs:      cfg.ProcessorRabbitURL,
-		Mode:      rabbit.Consumer,
-		QueueName: cfg.ProcessorRabbitQueueName + "-replay",
-		Bindings: []rabbit.Binding{
-			{
-				ExchangeName:    cfg.ProcessorRabbitExchangeName + "-replay-" + cfg.ServiceName,
-				ExchangeType:    cfg.ProcessorRabbitExchangeType,
-				ExchangeDeclare: cfg.ProcessorRabbitExchangeDeclare,
-				ExchangeDurable: cfg.ProcessorRabbitExchangeDurable,
-				BindingKeys:     cfg.ProcessorRabbitBindingKeys,
-			},
-		},
-		RetryReconnectSec: rabbit.DefaultRetryReconnectSec,
-		QueueDurable:      cfg.ProcessorRabbitQueueDurable,
-		QueueExclusive:    cfg.ProcessorRabbitQueueExclusive,
-		QueueAutoDelete:   cfg.ProcessorRabbitQueueAutoDelete,
-		QueueDeclare:      cfg.ProcessorRabbitQueueDeclare,
-		AutoAck:           cfg.ProcessorRabbitAutoAck,
-		ConsumerTag:       cfg.ServiceName + "-replayer",
-		UseTLS:            cfg.ProcessorRabbitUseTLS,
-		SkipVerifyTLS:     cfg.ProcessorRabbitSkipVerifyTLS,
-		Log: d.ZapLog.Sugar().With(
-			zap.String("env", cfg.EnvName),
-			zap.String("pkg", "rabbit"),
-			zap.String("backend", "replayer"),
-		),
-	})
-	if err != nil {
-		return errors.Wrap(err, "unable to create rabbit backend for replayer")
-	}
-
-	d.ReplayerRabbitBackend = replayerRabbitBackend
-
 	return nil
 }
 
@@ -374,46 +255,6 @@ func (d *Dependencies) setupServices(cfg *config.Config) error {
 	d.StateService = s
 
 	logger.Debug("Setting up processor service")
-
-	// Setup service that will consume and process messages from RabbitMQ
-	procService, err := processor.New(&processor.Options{
-		RabbitMap: map[string]*processor.RabbitConfig{
-			"main": {
-				RabbitInstance: d.ProcessorRabbitBackend,
-				NumConsumers:   cfg.ProcessorRabbitNumConsumers,
-				Func:           "ConsumeFunc",
-			},
-		},
-		// TODO: Instrument graceful shutdown
-		NewRelic:     d.NewRelicApp,
-		Log:          d.Log,
-		ShutdownCtx:  d.ShutdownCtx,
-		StateService: d.StateService,
-	}, cfg)
-	if err != nil {
-		return errors.Wrap(err, "unable to setup proc service")
-	}
-
-	d.ProcessorService = procService
-
-	// Setup service that will publish messages to RabbitMQ
-	pubService, err := publisher.New(&publisher.Options{
-		RabbitBackend:          d.PublisherRabbitBackend,
-		NumWorkers:             cfg.PublisherNumWorkers,
-		ExternalShutdownCtx:    d.ShutdownCtx,
-		ExternalShutdownDoneCh: d.PublisherShutdownDoneCh,
-		NewRelic:               d.NewRelicApp,
-		Log:                    d.Log,
-	})
-	if err != nil {
-		return errors.Wrap(err, "unable to create new publisher")
-	}
-
-	if err := pubService.Start(); err != nil {
-		return errors.Wrap(err, "unable to start publisher")
-	}
-
-	d.PublisherService = pubService
 
 	return nil
 }

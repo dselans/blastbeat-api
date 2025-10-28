@@ -3,4 +3,4 @@
 backend-data/*
 c.out
 ./build
-go-svc-template
+blastbeat-api

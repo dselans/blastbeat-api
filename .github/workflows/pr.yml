@@ -1,4 +1,4 @@
-name: go-svc-template - Pull Request
+name: blastbeat-api - Pull Request
 
 on: pull_request
 

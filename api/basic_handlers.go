@@ -27,7 +27,7 @@ func (a *API) versionHandler(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	rw.WriteHeader(http.StatusOK)
 
-	response := &ResponseJSON{Status: http.StatusOK, Message: "your_org/go-svc-template " + a.version}
+	response := &ResponseJSON{Status: http.StatusOK, Message: "dselans/blastbeat-api " + a.version}
 
 	if err := json.NewEncoder(rw).Encode(response); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)

@@ -13,8 +13,8 @@ import (
 	"github.com/superpowerdotcom/go-common-lib/clog"
 	"go.uber.org/zap"
 
-	"github.com/superpowerdotcom/go-svc-template/config"
-	"github.com/superpowerdotcom/go-svc-template/deps"
+	"github.com/dselans/blastbeat-api/config"
+	"github.com/dselans/blastbeat-api/deps"
 )
 
 type API struct {
@@ -79,7 +79,6 @@ func (a *API) Run() error {
 
 	a.server.Handler = router
 
-	router.HandlerFunc("POST", "/api/v1/example", a.exampleHandler)
 	router.HandlerFunc("GET", "/health-check", a.healthCheckHandler)
 	router.HandlerFunc("GET", "/version", a.versionHandler)
 

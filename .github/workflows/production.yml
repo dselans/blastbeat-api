@@ -12,7 +12,7 @@
 on:
   workflow_dispatch:
 
-name: go-svc-template - Production
+name: blastbeat-api - Production
 
 jobs:
   test-and-gocyclo:

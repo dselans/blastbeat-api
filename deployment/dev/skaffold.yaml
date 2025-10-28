@@ -1,8 +1,0 @@
-apiVersion: skaffold/v3
-kind: Config
-metadata:
-  name: go-svc-template-events
-requires:
-  # Core Deps (Rabbit, Redis, Medplum)
-  - path: skaffold.core.yaml
-  - path: skaffold.server.yaml
