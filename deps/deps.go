@@ -21,6 +21,7 @@ import (
 
 	"github.com/superpowerdotcom/go-common-lib/clog"
 
+	"github.com/dselans/blastbeat-api/backends/db"
 	sb "github.com/dselans/blastbeat-api/backends/state"
 	"github.com/dselans/blastbeat-api/config"
 	ss "github.com/dselans/blastbeat-api/services/state"
@@ -37,6 +38,7 @@ type Dependencies struct {
 	RedisBackend     *redis.Client
 	RedisLockBackend *redislock.Client
 	StateBackend     sb.IState
+	DBBackend        *db.DB
 
 	// Services
 	StateService ss.IState
@@ -232,6 +234,22 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	}
 
 	d.StateBackend = s
+
+	// Setup database backend
+	llog.Debug("Setting up database backend")
+
+	db2, err := db.New(&db.Options{
+		User:     cfg.DBUser,
+		Password: cfg.DBPassword,
+		Host:     cfg.DBHost,
+		Port:     cfg.DBPort,
+		DBName:   cfg.DBName,
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to setup database backend")
+	}
+
+	d.DBBackend = db2
 
 	return nil
 }
