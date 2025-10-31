@@ -26,6 +26,9 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
+# github.com/google/uuid v1.6.0
+## explicit
+github.com/google/uuid
 # github.com/joho/godotenv v1.5.1
 ## explicit; go 1.12
 github.com/joho/godotenv
@@ -34,6 +37,11 @@ github.com/joho/godotenv
 github.com/julienschmidt/httprouter
 # github.com/kr/pretty v0.2.0
 ## explicit; go 1.12
+# github.com/lib/pq v1.10.9
+## explicit; go 1.13
+github.com/lib/pq
+github.com/lib/pq/oid
+github.com/lib/pq/scram
 # github.com/newrelic/go-agent/v3 v3.40.1
 ## explicit; go 1.22
 github.com/newrelic/go-agent/v3/internal

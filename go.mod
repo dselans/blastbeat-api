@@ -6,7 +6,9 @@ require (
 	github.com/InVisionApp/go-health v2.1.0+incompatible
 	github.com/alecthomas/kong v1.12.1
 	github.com/bsm/redislock v0.9.4
+	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
+	github.com/lib/pq v1.10.9
 	github.com/newrelic/go-agent/v3 v3.40.1
 	github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrzap v1.2.4
 	github.com/newrelic/go-agent/v3/integrations/nrhttprouter v1.1.5
