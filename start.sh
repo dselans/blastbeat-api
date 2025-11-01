@@ -32,6 +32,10 @@ export BLASTBEAT_API_REDIS_DATABASE=0
 export BLASTBEAT_API_REDIS_POOL_SIZE=10
 export BLASTBEAT_API_REDIS_DIAL_TIMEOUT=5s
 
+echo "Environment variables check:"
+echo "  BLASTBEAT_API_DB_SSL_MODE=$BLASTBEAT_API_DB_SSL_MODE"
+env | grep BLASTBEAT_API_DB
+
 echo "Starting blastbeat-api via make run..."
 make run
 
