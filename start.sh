@@ -32,7 +32,7 @@ export BLASTBEAT_API_REDIS_DATABASE=0
 export BLASTBEAT_API_REDIS_POOL_SIZE=10
 export BLASTBEAT_API_REDIS_DIAL_TIMEOUT=5s
 
-echo "Starting blastbeat-api..."
-CGO_ENABLED=0 GOFLAGS=-mod=vendor go run main.go
+echo "Starting blastbeat-api via make run..."
+make run
 
 kill $REDIS_PID 2>/dev/null
