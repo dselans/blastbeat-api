@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"reflect"
-	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/joho/godotenv"
@@ -34,12 +33,6 @@ type Config struct {
 	DBPassword string `kong:"help='Database password.',default=blastbeat"`
 	DBPort     int    `kong:"help='Database port.',default=5432"`
 	DBSSLMode  string `kong:"help='Database SSL mode.',env=BLASTBEAT_API_DB_SSL_MODE,default=disable"`
-
-	RedisURL         string        `kong:"help='Redis URL.',default=localhost:6379"`
-	RedisPassword    string        `kong:"help='Redis Password.'"`
-	RedisDatabase    int           `kong:"help='Redis database.',default=0"`
-	RedisPoolSize    int           `kong:"help='Redis pool size.',default=10"`
-	RedisDialTimeout time.Duration `kong:"help='Redis dial timeout.',default=5s"`
 
 	KongContext *kong.Context `kong:"-"`
 }

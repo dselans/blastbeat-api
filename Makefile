@@ -44,7 +44,7 @@ run:
 	$(GO) run `ls -1 *.go | grep -v _test.go`
 
 .PHONY: run/deps
-run/deps: description = Start dependencies (postgres, redis) via docker compose
+run/deps: description = Start dependencies (postgres) via docker compose
 run/deps:
 	docker compose up -d
 

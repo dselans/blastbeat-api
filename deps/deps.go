@@ -11,20 +11,17 @@ import (
 	"time"
 
 	"github.com/InVisionApp/go-health"
-	"github.com/bsm/redislock"
 	"github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrzap"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/pkg/errors"
-	"github.com/redis/go-redis/v9"
-	"github.com/superpowerdotcom/go-common-lib/clog"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/superpowerdotcom/go-common-lib/clog"
+
 	"github.com/dselans/blastbeat-api/backends/db"
-	sb "github.com/dselans/blastbeat-api/backends/state"
 	"github.com/dselans/blastbeat-api/config"
 	sr "github.com/dselans/blastbeat-api/services/release"
-	ss "github.com/dselans/blastbeat-api/services/state"
 )
 
 const (
@@ -35,13 +32,9 @@ type customCheck struct{}
 
 type Dependencies struct {
 	// Backends
-	RedisBackend     *redis.Client
-	RedisLockBackend *redislock.Client
-	StateBackend     sb.IState
-	DBBackend        *db.DB
+	DBBackend *db.DB
 
 	// Services
-	StateService   ss.IState
 	ReleaseService sr.IRelease
 
 	Health health.IHealth
@@ -192,39 +185,6 @@ func (d *Dependencies) setupHealth() error {
 func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	llog := d.Log.With(zap.String("method", "setupBackends"))
 
-	llog.Debug("Setting up redis backend")
-
-	// Redis backend for state
-	client := redis.NewClient(&redis.Options{
-		Addr:        cfg.RedisURL,
-		Password:    cfg.RedisPassword,
-		DB:          cfg.RedisDatabase,
-		PoolSize:    cfg.RedisPoolSize,
-		DialTimeout: cfg.RedisDialTimeout,
-	})
-
-	if err := client.ClientInfo(d.ShutdownCtx).Err(); err != nil {
-		return errors.Wrap(err, "unable to connect to redis")
-	}
-
-	d.RedisBackend = client
-
-	// Create redislock backend
-	d.RedisLockBackend = redislock.New(d.RedisBackend)
-
-	// Create state backend
-	s, err := sb.New(&sb.Options{
-		Prefix:      cfg.ServiceName,
-		Log:         d.Log,
-		RedisClient: d.RedisBackend,
-		RedisLock:   d.RedisLockBackend,
-	})
-	if err != nil {
-		return errors.Wrap(err, "unable to setup state service")
-	}
-
-	d.StateBackend = s
-
 	// Setup database backend
 	llog.Debug("Setting up database backend")
 
@@ -255,20 +215,6 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 func (d *Dependencies) setupServices(cfg *config.Config) error {
 	logger := d.Log.With(zap.String("method", "setupServices"))
 	logger.Debug("Setting up services")
-
-	logger.Debug("Setting up state service")
-
-	// Setup state service
-	s, err := ss.New(&ss.Options{
-		Backend:     d.StateBackend,
-		Log:         d.Log,
-		ShutdownCtx: d.ShutdownCtx,
-	})
-	if err != nil {
-		return errors.Wrap(err, "unable to setup state service")
-	}
-
-	d.StateService = s
 
 	logger.Debug("Setting up release service")
 
@@ -338,7 +284,8 @@ func (d *Dependencies) LogConfig() {
 
 		padding := maxPadding - len(k)
 
-		line := fmt.Sprintf("%s %s %s %-"+strconv.Itoa(len(k))+"v", prefix, k, strings.Repeat(" ", padding), v)
+		line := fmt.Sprintf("%s %s %s %-"+strconv.Itoa(len(k))+"v",
+			prefix, k, strings.Repeat(" ", padding), v)
 		d.ZapLog.Debug(line)
 	}
 }
