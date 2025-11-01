@@ -31,6 +31,7 @@ type Options struct {
 type ReleaseFilters struct {
 	DateFrom         *time.Time
 	DateTo           *time.Time
+	DateExact        *time.Time
 	IncludedGenres   []string
 	ExcludedGenres   []string
 	ExcludedKeywords []string
@@ -98,17 +99,30 @@ func (r *Release) GetReleases(ctx context.Context,
 	var dbReleases []gensql.Release
 	var err error
 
-	if filters.DateFrom != nil && filters.DateTo != nil {
+	if filters.DateExact != nil {
+		dbReleases, err = r.opts.Backend.ListReleasesByExactDate(ctx,
+			*filters.DateExact)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch releases by exact date")
+		}
+	} else if filters.DateFrom != nil {
+		var dateTo time.Time
+
+		if filters.DateTo != nil {
+			dateTo = *filters.DateTo
+		} else {
+			dateTo = *filters.DateFrom
+		}
+
 		dbReleases, err = r.opts.Backend.ListReleasesByDateRange(ctx,
 			gensql.ListReleasesByDateRangeParams{
 				ReleaseDate:   *filters.DateFrom,
-				ReleaseDate_2: *filters.DateTo,
+				ReleaseDate_2: dateTo,
 			})
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch releases by date range")
 		}
 	} else {
-		// Get all releases
 		dbReleases, err = r.opts.Backend.ListReleases(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch releases")

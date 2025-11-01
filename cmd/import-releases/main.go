@@ -15,7 +15,10 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,7 +28,6 @@ import (
 
 	"github.com/dselans/blastbeat-api/backends/db"
 	"github.com/dselans/blastbeat-api/backends/gensql"
-	"github.com/dselans/blastbeat-api/config"
 )
 
 var httpClient = &http.Client{Timeout: 20 * time.Second}
@@ -52,6 +54,7 @@ var (
 	logLevel    string
 	levelDebug  bool
 	enableWrite bool
+	workers     int
 	spotTok     string
 	spotExp     time.Time
 )
@@ -116,6 +119,7 @@ func main() {
 
 	inPath := flag.String("in", "", "input CSV path (YYYY-MM-DD,Artist,Album,Label)")
 	flag.BoolVar(&enableWrite, "enable-write", false, "enable writing to database (default: dry-run mode)")
+	flag.IntVar(&workers, "workers", 1, "number of concurrent workers (default: 1)")
 	flag.Parse()
 
 	if *inPath == "" {
@@ -134,20 +138,26 @@ func main() {
 		logrus.Info("DRY RUN MODE - no database writes will occur")
 	}
 
-	logrus.Infof("CSV enrich start (LOG_LEVEL=%s, contact=%s, file=%s, enable-write=%v)",
-		logLevel, contact, *inPath, enableWrite)
+	logrus.Infof("CSV enrich start (LOG_LEVEL=%s, contact=%s, file=%s, enable-write=%v, workers=%d)",
+		logLevel, contact, *inPath, enableWrite, workers)
 
 	var dbBackend *db.DB
 	if enableWrite {
-		cfg := config.New("import-releases")
+		dbPort := 5432
+		if portStr := getenv("BLASTBEAT_API_DB_PORT", "5432"); portStr != "" {
+			if p, err := strconv.Atoi(portStr); err == nil {
+				dbPort = p
+			}
+		}
+
 		var err error
 		dbBackend, err = db.New(&db.Options{
-			User:     cfg.DBUser,
-			Password: cfg.DBPassword,
-			Host:     cfg.DBHost,
-			Port:     cfg.DBPort,
-			DBName:   cfg.DBName,
-			SSLMode:  cfg.DBSSLMode,
+			User:     getenv("BLASTBEAT_API_DB_USER", "blastbeat"),
+			Password: getenv("BLASTBEAT_API_DB_PASSWORD", "blastbeat"),
+			Host:     getenv("BLASTBEAT_API_DB_HOST", "localhost"),
+			Port:     dbPort,
+			DBName:   getenv("BLASTBEAT_API_DB_NAME", "blastbeat"),
+			SSLMode:  getenv("BLASTBEAT_API_DB_SSL_MODE", "disable"),
 		})
 		if err != nil {
 			log.Fatalf("failed to connect to database: %v", err)
@@ -165,80 +175,176 @@ func main() {
 	r.FieldsPerRecord = 4
 	r.TrimLeadingSpace = true
 
-	seen := make(map[string]bool)
+	if workers < 1 {
+		workers = 1
+	}
+
+	logrus.Infof("Starting import with %d worker(s)", workers)
+
 	ctx := context.Background()
 
+	type csvRow struct {
+		rowNum  int
+		dateISO string
+		artist  string
+		album   string
+		label   string
+	}
+
+	type result struct {
+		rowNum int
+		err    error
+		status string
+	}
+
+	csvRows := make(chan csvRow, workers*2)
+	results := make(chan result, workers*2)
+	var wg sync.WaitGroup
+
+	seen := make(map[string]bool)
+	var seenMu sync.Mutex
+
+	var totalRows int64
+	successCount := int64(0)
+	skipCount := int64(0)
+	errorCount := int64(0)
+
 	rowNum := 0
-	successCount := 0
-	skipCount := 0
-	errorCount := 0
 
-	for {
-		rec, err := r.Read()
-		if err == io.EOF {
-			break
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for row := range csvRows {
+				dateISO := row.dateISO
+				artist := row.artist
+				album := row.album
+				label := row.label
+
+				key := releaseKey(dateISO, artist, album)
+				seenMu.Lock()
+				if seen[key] {
+					seenMu.Unlock()
+					logrus.Warnf("DUPE DETECTED! %d: %s | %s | %s",
+						row.rowNum, dateISO, artist, album)
+					results <- result{rowNum: row.rowNum, status: "dupe_skip"}
+					continue
+				}
+				seen[key] = true
+				seenMu.Unlock()
+
+				logrus.Infof("Enriching release: %s - %s", artist, album)
+				enriched := enrichRelease(dateISO, artist, album, label, contact)
+				logrus.Infof("Enrichment complete - genres: %v, country: %s, sources: %v",
+					enriched.Genres, enriched.Country, enriched.Sources)
+
+				if !enableWrite {
+					b, _ := json.MarshalIndent(enriched, "", "  ")
+					logrus.Infof("DRY RUN - would insert release:\n%s", string(b))
+					results <- result{rowNum: row.rowNum, status: "success"}
+					continue
+				}
+
+				releaseDate, err := time.Parse("2006-01-02", dateISO)
+				if err != nil {
+					logrus.Errorf("row %d failed to parse date: %v", row.rowNum, err)
+					results <- result{rowNum: row.rowNum, err: err, status: "error"}
+					continue
+				}
+
+				exists, err := releaseExists(ctx, dbBackend, artist, album, releaseDate)
+				if err != nil {
+					logrus.Errorf("row %d failed to check for existing release: %v",
+						row.rowNum, err)
+					results <- result{rowNum: row.rowNum, err: err, status: "error"}
+					continue
+				}
+
+				if exists {
+					logrus.Warnf("row %d: release already exists - %s: %s (date: %s), skipping",
+						row.rowNum, artist, album, dateISO)
+					results <- result{rowNum: row.rowNum, status: "exists_skip"}
+					continue
+				}
+
+				release, err := createReleaseFromEnriched(ctx, dbBackend, enriched)
+				if err != nil {
+					logrus.Errorf("row %d failed to insert: %v", row.rowNum, err)
+					results <- result{rowNum: row.rowNum, err: err, status: "error"}
+					continue
+				}
+
+				logrus.Infof("row %d: inserted release %s - %s: %s",
+					row.rowNum, release.ID, release.Artist, release.Title)
+				results <- result{rowNum: row.rowNum, status: "success"}
+			}
+		}()
+	}
+
+	go func() {
+		for {
+			rec, err := r.Read()
+			if err == io.EOF {
+				close(csvRows)
+				return
+			}
+			if err != nil {
+				logrus.Warnf("csv read: %v", err)
+				atomic.AddInt64(&errorCount, 1)
+				continue
+			}
+			rowNum++
+
+			dateISO := strings.TrimSpace(rec[0])
+			artist := strings.TrimSpace(rec[1])
+			album := strings.TrimSpace(rec[2])
+			label := strings.TrimSpace(rec[3])
+
+			logrus.Infof("Processing row %d: %s | %s | %s", rowNum, dateISO, artist, album)
+
+			if dateISO == "" || artist == "" || album == "" {
+				logrus.Warnf("row %d missing required fields", rowNum)
+				atomic.AddInt64(&skipCount, 1)
+				continue
+			}
+
+			if _, err := time.Parse("2006-01-02", dateISO); err != nil {
+				logrus.Warnf("row %d bad date %q: %v", rowNum, dateISO, err)
+				atomic.AddInt64(&skipCount, 1)
+				continue
+			}
+
+			atomic.AddInt64(&totalRows, 1)
+			csvRows <- csvRow{
+				rowNum:  rowNum,
+				dateISO: dateISO,
+				artist:  artist,
+				album:   album,
+				label:   label,
+			}
 		}
-		if err != nil {
-			logrus.Warnf("csv read: %v", err)
-			errorCount++
-			continue
+	}()
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for res := range results {
+		switch res.status {
+		case "success":
+			atomic.AddInt64(&successCount, 1)
+		case "exists_skip", "dupe_skip":
+			atomic.AddInt64(&skipCount, 1)
+		case "error":
+			atomic.AddInt64(&errorCount, 1)
 		}
-		rowNum++
-
-		dateISO := strings.TrimSpace(rec[0])
-		artist := strings.TrimSpace(rec[1])
-		album := strings.TrimSpace(rec[2])
-		label := strings.TrimSpace(rec[3])
-
-		logrus.Infof("Processing row %d: %s | %s | %s", rowNum, dateISO, artist, album)
-
-		if dateISO == "" || artist == "" || album == "" {
-			logrus.Warnf("row %d missing required fields", rowNum)
-			skipCount++
-			continue
-		}
-
-		if _, err := time.Parse("2006-01-02", dateISO); err != nil {
-			logrus.Warnf("row %d bad date %q: %v", rowNum, dateISO, err)
-			skipCount++
-			continue
-		}
-
-		key := releaseKey(dateISO, artist, album)
-		if seen[key] {
-			logrus.Warnf("DUPE DETECTED! %d: %s | %s | %s",
-				rowNum, dateISO, artist, album)
-			skipCount++
-			continue
-		}
-		seen[key] = true
-
-		logrus.Infof("Enriching release: %s - %s", artist, album)
-		enriched := enrichRelease(dateISO, artist, album, label, contact)
-		logrus.Infof("Enrichment complete - genres: %v, country: %s, sources: %v",
-			enriched.Genres, enriched.Country, enriched.Sources)
-
-		if !enableWrite {
-			b, _ := json.MarshalIndent(enriched, "", "  ")
-			logrus.Infof("DRY RUN - would insert release:\n%s", string(b))
-			successCount++
-			continue
-		}
-
-		release, err := createReleaseFromEnriched(ctx, dbBackend, enriched)
-		if err != nil {
-			logrus.Errorf("row %d failed to insert: %v", rowNum, err)
-			errorCount++
-			continue
-		}
-
-		logrus.Infof("row %d: inserted release %s - %s: %s",
-			rowNum, release.ID, release.Artist, release.Title)
-		successCount++
 	}
 
 	logrus.Infof("Done. Processed: %d, Success: %d, Skipped: %d, Errors: %d",
-		rowNum, successCount, skipCount, errorCount)
+		atomic.LoadInt64(&totalRows), atomic.LoadInt64(&successCount),
+		atomic.LoadInt64(&skipCount), atomic.LoadInt64(&errorCount))
 }
 
 func createReleaseFromEnriched(ctx context.Context, dbBackend *db.DB,
@@ -324,6 +430,25 @@ func createReleaseFromEnriched(ctx context.Context, dbBackend *db.DB,
 		return nil, err
 	}
 	return &release, nil
+}
+
+func releaseExists(ctx context.Context, dbBackend *db.DB,
+	artist, album string, releaseDate time.Time) (bool, error) {
+	query := `
+		SELECT COUNT(*) 
+		FROM releases 
+		WHERE LOWER(artist) = LOWER($1) 
+		  AND LOWER(title) = LOWER($2) 
+		  AND release_date = $3
+	`
+
+	var count int
+	err := dbBackend.GetDB().QueryRowContext(ctx, query, artist, album, releaseDate).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }
 
 type enrichedRelease struct {

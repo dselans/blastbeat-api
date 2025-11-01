@@ -77,7 +77,7 @@ func (a *API) Run() error {
 
 	router := nrhttprouter.New(a.deps.NewRelicApp)
 
-	a.server.Handler = router
+	a.server.Handler = a.corsMiddleware(router)
 
 	router.HandlerFunc("GET", "/health-check", a.healthCheckHandler)
 	router.HandlerFunc("GET", "/version", a.versionHandler)

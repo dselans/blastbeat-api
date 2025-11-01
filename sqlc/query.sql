@@ -15,6 +15,12 @@ FROM releases
 WHERE release_date BETWEEN $1 AND $2
 ORDER BY release_date DESC, created_at DESC;
 
+-- name: ListReleasesByExactDate :many
+SELECT *
+FROM releases
+WHERE release_date = $1
+ORDER BY created_at DESC;
+
 -- name: ListReleasesByArtist :many
 SELECT *
 FROM releases

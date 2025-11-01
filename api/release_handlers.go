@@ -17,23 +17,33 @@ func (a *API) releasesHandler(rw http.ResponseWriter, r *http.Request) {
 	// Parse query parameters
 	filters := &release.ReleaseFilters{}
 
-	// dateFrom
-	if dateFromStr := r.URL.Query().Get("dateFrom"); dateFromStr != "" {
-		dateFrom, err := time.Parse("2006-01-02", dateFromStr)
+	// dateExact (takes precedence over dateFrom/dateTo)
+	if dateExactStr := r.URL.Query().Get("dateExact"); dateExactStr != "" {
+		dateExact, err := time.Parse("2006-01-02", dateExactStr)
 		if err != nil {
-			a.writeError(rw, http.StatusBadRequest, "Invalid dateFrom parameter")
+			a.writeError(rw, http.StatusBadRequest, "Invalid dateExact parameter")
 			return
 		}
-		filters.DateFrom = &dateFrom
-	}
+		filters.DateExact = &dateExact
+	} else {
+		// dateFrom
+		if dateFromStr := r.URL.Query().Get("dateFrom"); dateFromStr != "" {
+			dateFrom, err := time.Parse("2006-01-02", dateFromStr)
+			if err != nil {
+				a.writeError(rw, http.StatusBadRequest, "Invalid dateFrom parameter")
+				return
+			}
+			filters.DateFrom = &dateFrom
+		}
 
-	if dateToStr := r.URL.Query().Get("dateTo"); dateToStr != "" {
-		dateTo, err := time.Parse("2006-01-02", dateToStr)
-		if err != nil {
-			a.writeError(rw, http.StatusBadRequest, "Invalid dateTo parameter")
-			return
+		if dateToStr := r.URL.Query().Get("dateTo"); dateToStr != "" {
+			dateTo, err := time.Parse("2006-01-02", dateToStr)
+			if err != nil {
+				a.writeError(rw, http.StatusBadRequest, "Invalid dateTo parameter")
+				return
+			}
+			filters.DateTo = &dateTo
 		}
-		filters.DateTo = &dateTo
 	}
 
 	// includedGenres
@@ -57,12 +67,6 @@ func (a *API) releasesHandler(rw http.ResponseWriter, r *http.Request) {
 	// followerRange
 	if followerRange := r.URL.Query().Get("followerRange"); followerRange != "" {
 		filters.FollowerRange = followerRange
-	}
-
-	// Validate that if one date is provided, both should be provided
-	if (filters.DateFrom != nil && filters.DateTo == nil) || (filters.DateFrom == nil && filters.DateTo != nil) {
-		a.writeError(rw, http.StatusBadRequest, "Both dateFrom and dateTo must be provided together")
-		return
 	}
 
 	// Fetch releases from service

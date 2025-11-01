@@ -49,22 +49,22 @@ run/deps:
 	docker compose up -d
 
 .PHONY: import/releases
-import/releases: description = Import releases from CSV (usage: make import/releases IN=path/to/file.csv)
+import/releases: description = Import releases from CSV (usage: make import/releases IN=path/to/file.csv [WORKERS=N])
 import/releases:
 	@if [ -z "$(IN)" ]; then \
-		echo "Error: IN is required. Usage: make import/releases IN=assets/bb-etl/releases.csv"; \
+		echo "Error: IN is required. Usage: make import/releases IN=assets/bb-etl/releases.csv [WORKERS=5]"; \
 		exit 1; \
 	fi
-	$(GO) run cmd/import-releases/main.go -in $(IN) --enable-write
+	$(GO) run cmd/import-releases/main.go -in $(IN) --enable-write --workers $(or $(WORKERS),1)
 
 .PHONY: import/releases-dry
-import/releases-dry: description = Dry run import releases from CSV (usage: make import/releases-dry IN=path/to/file.csv)
+import/releases-dry: description = Dry run import releases from CSV (usage: make import/releases-dry IN=path/to/file.csv [WORKERS=N])
 import/releases-dry:
 	@if [ -z "$(IN)" ]; then \
-		echo "Error: IN is required. Usage: make import/releases-dry IN=assets/bb-etl/releases.csv"; \
+		echo "Error: IN is required. Usage: make import/releases-dry IN=assets/bb-etl/releases.csv [WORKERS=5]"; \
 		exit 1; \
 	fi
-	$(GO) run cmd/import-releases/main.go -in $(IN)
+	$(GO) run cmd/import-releases/main.go -in $(IN) --workers $(or $(WORKERS),1)
 
 ### Build
 

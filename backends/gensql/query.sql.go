@@ -385,6 +385,53 @@ func (q *Queries) ListReleasesByDateRange(ctx context.Context, arg ListReleasesB
 	return items, nil
 }
 
+const listReleasesByExactDate = `-- name: ListReleasesByExactDate :many
+SELECT id, title, artist, album_art_url, release_date, label, label_url, follower_count, genres, country, external_links, spotify_url, youtube_url, bandcamp_url, created_at, updated_at
+FROM releases
+WHERE release_date = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListReleasesByExactDate(ctx context.Context, releaseDate time.Time) ([]Release, error) {
+	rows, err := q.db.QueryContext(ctx, listReleasesByExactDate, releaseDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Release
+	for rows.Next() {
+		var i Release
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Artist,
+			&i.AlbumArtUrl,
+			&i.ReleaseDate,
+			&i.Label,
+			&i.LabelUrl,
+			&i.FollowerCount,
+			&i.Genres,
+			&i.Country,
+			&i.ExternalLinks,
+			&i.SpotifyUrl,
+			&i.YoutubeUrl,
+			&i.BandcampUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listReleasesByFollowerRange = `-- name: ListReleasesByFollowerRange :many
 SELECT id, title, artist, album_art_url, release_date, label, label_url, follower_count, genres, country, external_links, spotify_url, youtube_url, bandcamp_url, created_at, updated_at
 FROM releases

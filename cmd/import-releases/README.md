@@ -87,8 +87,28 @@ go run cmd/import-releases/main.go -in assets/bb-etl/releases.csv --enable-write
 Or using Make:
 
 ```bash
-make import/releases IN=assets/bb-etl/releases.csv ENABLE_WRITE=1
+make import/releases IN=assets/bb-etl/releases.csv
 ```
+
+### Concurrent Processing
+
+By default, the script processes releases sequentially (1 worker). To process
+multiple releases in parallel, use the `--workers` flag:
+
+```bash
+go run cmd/import-releases/main.go -in assets/bb-etl/releases.csv --enable-write --workers 5
+```
+
+Or using Make:
+
+```bash
+make import/releases IN=assets/bb-etl/releases.csv WORKERS=5
+```
+
+The workers flag specifies how many releases to process concurrently. This can
+significantly speed up processing when fetching data from external APIs (Spotify,
+YouTube, Metal Archives, Discogs). Note that higher worker counts may hit API
+rate limits, so use with caution.
 
 ## How It Works
 
