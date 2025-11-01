@@ -43,6 +43,29 @@ run: description = Run blastbeat-api locally
 run:
 	$(GO) run `ls -1 *.go | grep -v _test.go`
 
+.PHONY: run/deps
+run/deps: description = Start dependencies (postgres, redis) via docker compose
+run/deps:
+	docker compose up -d
+
+.PHONY: import/releases
+import/releases: description = Import releases from CSV (usage: make import/releases IN=path/to/file.csv)
+import/releases:
+	@if [ -z "$(IN)" ]; then \
+		echo "Error: IN is required. Usage: make import/releases IN=assets/bb-etl/releases.csv"; \
+		exit 1; \
+	fi
+	$(GO) run cmd/import-releases/main.go -in $(IN) --enable-write
+
+.PHONY: import/releases-dry
+import/releases-dry: description = Dry run import releases from CSV (usage: make import/releases-dry IN=path/to/file.csv)
+import/releases-dry:
+	@if [ -z "$(IN)" ]; then \
+		echo "Error: IN is required. Usage: make import/releases-dry IN=assets/bb-etl/releases.csv"; \
+		exit 1; \
+	fi
+	$(GO) run cmd/import-releases/main.go -in $(IN)
+
 ### Build
 
 .PHONY: build/linux-amd64
@@ -134,3 +157,33 @@ test/gocyclo:
 	else \
 		echo "No complexity violations found. All functions are under threshold 20."; \
 	fi
+
+### Database Migrations
+
+MIGRATIONS_DIR = migrations
+
+.PHONY: migration/new
+migration/new: description = Create a new migration (usage: make migration/new NAME=migration_name)
+migration/new:
+	@if [ -z "$(NAME)" ]; then \
+		echo "Error: NAME is required. Usage: make migration/new NAME=add_user_table"; \
+		exit 1; \
+	fi
+	@NEXT_NUM=$$(ls -1d $(MIGRATIONS_DIR)/*/ 2>/dev/null | wc -l | awk '{printf "%03d", $$1+1}'); \
+	MIG_DIR="$(MIGRATIONS_DIR)/$${NEXT_NUM}_$(NAME)"; \
+	mkdir -p "$$MIG_DIR"; \
+	SQL_FILE="$$MIG_DIR/$${NEXT_NUM}_$(NAME).sql"; \
+	echo "-- Add your migration SQL here" > "$$SQL_FILE"; \
+	README_FILE="$$MIG_DIR/README.md"; \
+	echo "# $${NEXT_NUM}_$(NAME)" > "$$README_FILE"; \
+	echo "" >> "$$README_FILE"; \
+	echo "Description of what this migration does." >> "$$README_FILE"; \
+	echo "Created migration: $$MIG_DIR"
+
+.PHONY: migration/list
+migration/list: description = List all migrations
+migration/list:
+	@echo "Migrations in $(MIGRATIONS_DIR):"; \
+	ls -1d $(MIGRATIONS_DIR)/*/ 2>/dev/null | while read dir; do \
+		echo "  - $$(basename $$dir)"; \
+	done

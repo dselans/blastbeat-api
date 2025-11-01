@@ -3,6 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/pkg/errors"
 
@@ -32,16 +35,19 @@ func main() {
 		log.Fatalf("unable to create API instance: %s", err)
 	}
 
-	// Run API server in a goroutine so that we can allow signal listener to
-	// block the main thread so it can orchestrate graceful shutdown.
 	go func() {
 		if err := a.Run(); err != nil {
 			if errors.Is(err, http.ErrServerClosed) {
-				// Graceful API server shutdown
 				return
 			}
-
 			log.Fatalf("API server run() failed: %s", err)
 		}
 	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	<-sigChan
+
+	log.Println("Shutting down server...")
 }

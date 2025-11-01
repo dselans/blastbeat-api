@@ -17,10 +17,10 @@ type Options struct {
 	Host     string
 	Port     int
 	DBName   string
+	SSLMode  string
 }
 
 type DB struct {
-	// Only becomes available after New() returns successfully.
 	*gensql.Queries
 
 	opts *Options
@@ -34,12 +34,20 @@ func New(opts *Options) (*DB, error) {
 		return nil, errors.Wrap(err, "invalid options")
 	}
 
-	// Try to connect to db
-	dsn := fmt.Sprintf("user=%s password=%s host=%s port=%d dbname=%s sslmode=verify-full")
+	sslMode := opts.SSLMode
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+
+	dsn := fmt.Sprintf(
+		"user=%s password=%s host=%s port=%d dbname=%s sslmode=%s",
+		opts.User, opts.Password, opts.Host, opts.Port,
+		opts.DBName, sslMode)
 
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse database connection string")
+		return nil,
+			errors.Wrap(err, "failed to parse database connection string")
 	}
 
 	db := stdlib.OpenDB(*cfg.ConnConfig)
@@ -47,8 +55,13 @@ func New(opts *Options) (*DB, error) {
 
 	return &DB{
 		Queries: queries,
+		opts:    opts,
 		db:      db,
 	}, nil
+}
+
+func (d *DB) GetDB() *sql.DB {
+	return d.db
 }
 
 func validateOptions(opts *Options) error {

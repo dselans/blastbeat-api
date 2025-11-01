@@ -28,14 +28,13 @@ type Config struct {
 	NewRelicAppName    string `kong:"help='New Relic application name.',default='blastbeat-api (DEV)'"`
 	NewRelicLicenseKey string `kong:"help='New Relic license key.'"`
 
-	// DB settings
 	DBHost     string `kong:"help='Database host.',default=localhost"`
 	DBName     string `kong:"help='Database name.',default=blastbeat"`
 	DBUser     string `kong:"help='Database user.',default=blastbeat"`
 	DBPassword string `kong:"help='Database password.',default=blastbeat"`
 	DBPort     int    `kong:"help='Database port.',default=5432"`
+	DBSSLMode  string `kong:"help='Database SSL mode.',default=disable"`
 
-	// Redis settings
 	RedisURL         string        `kong:"help='Redis URL.',default=localhost:6379"`
 	RedisPassword    string        `kong:"help='Redis Password.'"`
 	RedisDatabase    int           `kong:"help='Redis database.',default=0"`
@@ -46,10 +45,9 @@ type Config struct {
 }
 
 func New(version string) *Config {
-	// Attempt to load .env - do not fail if it's not there. Only environment
-	// that might have this is in local/dev; staging, prod should not have one.
 	if err := godotenv.Load(EnvFile); err != nil {
-		zap.L().Warn("unable to load dotenv file", zap.String("err", err.Error()))
+		zap.L().Warn("unable to load dotenv file",
+			zap.String("err", err.Error()))
 	}
 
 	cfg := &Config{}
@@ -78,7 +76,6 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// GetMap generates a map of field:value pairs for all fields in Config struct
 func (c *Config) GetMap() map[string]string {
 	fields := make(map[string]string)
 

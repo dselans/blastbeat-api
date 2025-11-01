@@ -22,12 +22,17 @@ func (a *API) healthCheckHandler(wr http.ResponseWriter, r *http.Request) {
 
 func (a *API) versionHandler(rw http.ResponseWriter, r *http.Request) {
 	logger := a.log.With(zap.String("method", "versionHandler"))
-	logger.Info("handling /version request", zap.String("remoteAddr", r.RemoteAddr))
+	logger.Info("handling /version request",
+		zap.String("remoteAddr", r.RemoteAddr))
 
-	rw.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	rw.Header().Set("Content-Type",
+		"application/json; charset=UTF-8")
 	rw.WriteHeader(http.StatusOK)
 
-	response := &ResponseJSON{Status: http.StatusOK, Message: "dselans/blastbeat-api " + a.version}
+	response := &ResponseJSON{
+		Status:  http.StatusOK,
+		Message: "dselans/blastbeat-api " + a.version,
+	}
 
 	if err := json.NewEncoder(rw).Encode(response); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)

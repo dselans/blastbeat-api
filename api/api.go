@@ -82,6 +82,9 @@ func (a *API) Run() error {
 	router.HandlerFunc("GET", "/health-check", a.healthCheckHandler)
 	router.HandlerFunc("GET", "/version", a.versionHandler)
 
+	router.HandlerFunc("GET", "/api/releases", a.releasesHandler)
+	router.HandlerFunc("GET", "/api/genres", a.genresHandler)
+
 	// Maybe enable profiling
 	if a.config.EnablePprof {
 		router.Handler(http.MethodGet, "/debug/pprof/*item", http.DefaultServeMux)

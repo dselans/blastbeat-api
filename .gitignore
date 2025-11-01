@@ -1,5 +1,6 @@
 .env
 .idea
+.vscode
 backend-data/*
 c.out
 ./build

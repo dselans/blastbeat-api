@@ -16,14 +16,14 @@ import (
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
+	"github.com/superpowerdotcom/go-common-lib/clog"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/superpowerdotcom/go-common-lib/clog"
 
 	"github.com/dselans/blastbeat-api/backends/db"
 	sb "github.com/dselans/blastbeat-api/backends/state"
 	"github.com/dselans/blastbeat-api/config"
+	sr "github.com/dselans/blastbeat-api/services/release"
 	ss "github.com/dselans/blastbeat-api/services/state"
 )
 
@@ -41,27 +41,19 @@ type Dependencies struct {
 	DBBackend        *db.DB
 
 	// Services
-	StateService ss.IState
+	StateService   ss.IState
+	ReleaseService sr.IRelease
 
 	Health health.IHealth
 
-	// Global, shared shutdown context - all services and backends listen to
-	// this context to know when to shutdown.
-	ShutdownCtx context.Context
-
-	// ShutdownCancel is the cancel function for the global shutdown context
+	ShutdownCtx    context.Context
 	ShutdownCancel context.CancelFunc
 
 	NewRelicApp *newrelic.Application
 	Config      *config.Config
 
-	// Log is the main, shared logger (you should use this for all logging)
-	Log clog.ICustomLog
-
-	// ZapLog is the zap logger (you shouldn't need this outside of deps)
-	ZapLog *zap.Logger
-
-	// ZapCore can be used to generate a brand-new logger (you shouldn't need this very often)
+	Log     clog.ICustomLog
+	ZapLog  *zap.Logger
 	ZapCore zapcore.Core
 }
 
@@ -144,13 +136,13 @@ func (d *Dependencies) setupLogging() error {
 			zap.DebugLevel,
 		)
 	} else {
-		core = zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+		core = zapcore.NewCore(
+			zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
 			zapcore.AddSync(os.Stdout),
 			zap.InfoLevel,
 		)
 	}
 
-	// If using New Relic, wrap zap core with New Relic core
 	if d.NewRelicApp != nil {
 		var err error
 
@@ -160,12 +152,10 @@ func (d *Dependencies) setupLogging() error {
 		}
 	}
 
-	// Save the actual loggers
 	d.ZapLog = zap.New(core)
 	d.ZapCore = core
-
-	// Create a new primary logger that will be passed to everyone
-	d.Log = clog.New(d.ZapLog, zap.String("env", d.Config.EnvName))
+	d.Log = clog.New(d.ZapLog,
+		zap.String("env", d.Config.EnvName))
 
 	d.Log.Debug("Logging initialized")
 
@@ -244,12 +234,20 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		Host:     cfg.DBHost,
 		Port:     cfg.DBPort,
 		DBName:   cfg.DBName,
+		SSLMode:  cfg.DBSSLMode,
 	})
 	if err != nil {
 		return errors.Wrap(err, "unable to setup database backend")
 	}
 
 	d.DBBackend = db2
+
+	llog.Debug("Running database migrations")
+	ctx := context.Background()
+	if err := db2.Migrate(ctx, d.Log); err != nil {
+		return errors.Wrap(err, "failed to run database migrations")
+	}
+	llog.Debug("Database migrations completed")
 
 	return nil
 }
@@ -272,7 +270,18 @@ func (d *Dependencies) setupServices(cfg *config.Config) error {
 
 	d.StateService = s
 
-	logger.Debug("Setting up processor service")
+	logger.Debug("Setting up release service")
+
+	// Setup release service
+	releaseService, err := sr.New(&sr.Options{
+		Backend: d.DBBackend,
+		Log:     d.Log,
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to setup release service")
+	}
+
+	d.ReleaseService = releaseService
 
 	return nil
 }
